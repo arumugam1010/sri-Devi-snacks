@@ -1,0 +1,177 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String
+  username   String   @unique
+  email      String   @unique
+  password   String
+  role       Role     @default(USER)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  bills      Bill[]
+
+  @@map("users")
+}
+
+model Shop {
+  id          Int      @id @default(autoincrement())
+  shopName    String   @map("shop_name")
+  address     String
+  contact     String
+  email       String?
+  gstNumber   String?  @map("gst_number")
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  shopProducts ShopProduct[]
+  bills        Bill[]
+  schedules    Schedule[]
+
+  @@map("shops")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  productName String   @map("product_name")
+  unit        String
+  hsnCode     String   @map("hsn_code")
+  gst         Float    @default(5.0)
+  price       Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  shopProducts ShopProduct[]
+  stocks       Stock[]
+  billItems    BillItem[]
+
+  @@map("products")
+}
+
+model ShopProduct {
+  id        Int      @id @default(autoincrement())
+  shopId    Int      @map("shop_id")
+  productId Int      @map("product_id")
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shop    Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, productId])
+  @@map("shop_products")
+}
+
+model Stock {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
+  quantity  Int      @default(0)
+  rate      Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId])
+  @@map("stocks")
+}
+
+model Bill {
+  id             Int      @id @default(autoincrement())
+  billNumber     String   @unique @map("bill_number")
+  shopId         Int      @map("shop_id")
+  userId         Int      @map("user_id")
+  billDate       DateTime @map("bill_date")
+  totalAmount    Float    @map("total_amount")
+  receivedAmount Float    @map("received_amount") @default(0)
+  pendingAmount  Float    @map("pending_amount") @default(0)
+  status         BillStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  shop      Shop       @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  billItems BillItem[]
+
+  @@map("bills")
+}
+
+model BillItem {
+  id        Int      @id @default(autoincrement())
+  billId    Int      @map("bill_id")
+  productId Int      @map("product_id")
+  quantity  Float
+  rate      Float
+  amount    Float
+  createdAt DateTime @default(now())
+
+  // Relations
+  bill    Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("bill_items")
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  shopId    Int      @map("shop_id")
+  dayOfWeek DayOfWeek @map("day_of_week")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, dayOfWeek])
+  @@map("schedules")
+}
+
+// Enums
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum BillStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
