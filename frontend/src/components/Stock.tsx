@@ -135,7 +135,7 @@ const Stock: React.FC = () => {
           if (createResponse.success) {
             setProducts(products.map(p =>
               p.id === productId
-                ? { ...p, quantity: quantity, stockId: createResponse.data.id }
+                ? { ...p, quantity: quantity, stockId: createResponse.data.id, rate: createResponse.data.rate || p.rate }
                 : p
             ));
           } else {
@@ -146,7 +146,7 @@ const Stock: React.FC = () => {
           if (response.success) {
             setProducts(products.map(product =>
               product.id === productId
-                ? { ...product, quantity: quantity }
+                ? { ...product, quantity: quantity, rate: response.data.rate || product.rate }
                 : product
             ));
           } else {
@@ -182,7 +182,7 @@ const Stock: React.FC = () => {
         if (createResponse.success) {
           setProducts(products.map(p =>
             p.id === productId
-              ? { ...p, quantity: newQuantity, stockId: createResponse.data.id }
+              ? { ...p, quantity: newQuantity, stockId: createResponse.data.id, rate: createResponse.data.rate || p.rate }
               : p
           ));
         } else {
@@ -193,7 +193,7 @@ const Stock: React.FC = () => {
         if (response.success) {
           setProducts(products.map(product =>
             product.id === productId
-              ? { ...product, quantity: newQuantity }
+              ? { ...product, quantity: newQuantity, rate: response.data.rate || product.rate }
               : product
           ));
         } else {

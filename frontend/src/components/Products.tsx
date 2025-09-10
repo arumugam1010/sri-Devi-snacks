@@ -33,8 +33,6 @@ const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-
   const [activeTab, setActiveTab] = useState<'products' | 'pricing'>('products');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -43,6 +41,44 @@ const Products: React.FC = () => {
   const [selectedShop, setSelectedShop] = useState<number | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
   const [priceEditValue, setPriceEditValue] = useState<string>('');
+
+  // New useEffect to preload shopProducts for all shops in weeklySchedule
+  React.useEffect(() => {
+    const fetchAllShopProducts = async () => {
+      try {
+        const allShops = weeklySchedule.flatMap(day => day.shops);
+        const uniqueShopIds = Array.from(new Set(allShops.map(shop => shop.id)));
+
+        let allShopProducts: ShopProduct[] = [];
+
+        for (const shopId of uniqueShopIds) {
+          const response = await shopsAPI.getShopProducts(shopId);
+          if (response.success) {
+            const fetchedShopProducts: ShopProduct[] = response.data.map((sp: any) => ({
+              id: sp.id,
+              shop_id: sp.shopId,
+              product_id: sp.productId,
+              price: sp.price,
+              shop_name: sp.shop?.shopName || '',
+              product_name: sp.product?.productName || '',
+              unit: sp.product?.unit || '',
+              gst: sp.product?.gst || 0,
+              hsn_code: sp.product?.hsnCode || ''
+            }));
+            allShopProducts = [...allShopProducts, ...fetchedShopProducts];
+          }
+        }
+
+        setShopProducts(allShopProducts);
+      } catch (error) {
+        console.error('Error preloading shop products:', error);
+      }
+    };
+
+    if (weeklySchedule.length > 0) {
+      fetchAllShopProducts();
+    }
+  }, [weeklySchedule]);
 
 
   // Fetch products data on component mount
@@ -222,7 +258,10 @@ const Products: React.FC = () => {
           gst: sp.product?.gst || 0,
           hsn_code: sp.product?.hsnCode || ''
         }));
-        setShopProducts(fetchedShopProducts);
+
+        // Merge fetched shop products with existing shopProducts state
+        const updatedShopProducts = [...shopProducts.filter(sp => sp.shop_id !== shopId), ...fetchedShopProducts];
+        setShopProducts(updatedShopProducts);
       } else {
         // If no shop products exist, initialize with all products at default prices
         const shop = allShops.find(s => s.id === shopId);
@@ -246,7 +285,7 @@ const Products: React.FC = () => {
           newShopProducts.push(newShopProduct);
         });
 
-        setShopProducts(newShopProducts);
+        setShopProducts([...shopProducts.filter(sp => sp.shop_id !== shopId), ...newShopProducts]);
       }
     } catch (error) {
       console.error('Error fetching shop products:', error);
