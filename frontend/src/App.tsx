@@ -94,6 +94,8 @@ interface UserData {
     setIsAuthenticated(false);
     setUser(null);
     localStorage.removeItem('user');
+    // Redirect to login page on logout
+    window.location.href = '/';
   };
   
   if (isAuthenticated === null) {
