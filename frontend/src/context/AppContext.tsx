@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { productsAPI, billsAPI, schedulesAPI, shopsAPI } from '../services/api';
+import { productsAPI, billsAPI, schedulesAPI, shopsAPI, stocksAPI } from '../services/api';
 
 interface Product {
   id: number;
@@ -107,8 +107,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       // Fetch products
       const productsResponse = await productsAPI.getProducts({ limit: 100 });
+      let productsData: any[] = [];
       if (productsResponse.success) {
-        setProducts(productsResponse.data.map((p: any) => ({
+        productsData = productsResponse.data.map((p: any) => ({
           id: p.id,
           product_name: p.productName,
           unit: p.unit,
@@ -116,12 +117,31 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           created_date: p.createdAt,
           gst: p.gst,
           quantity: p.stocks?.[0]?.quantity || 0,
-          rate: p.stocks?.[0]?.rate || 0,
+          rate: p.price || 0,  // Use price from products as rate
           hsn_code: p.hsnCode,
           price: p.price || 0,
           stockId: p.stocks?.[0]?.id || null,
-        })));
+        }));
       }
+
+      // Fetch stocks and merge with products
+      const stocksResponse = await stocksAPI.getStocks();
+      if (stocksResponse.success) {
+        const stocksData = stocksResponse.data;
+        productsData = productsData.map(product => {
+          const stock = stocksData.find((s: any) => s.productId === product.id);
+          if (stock) {
+            return {
+              ...product,
+              quantity: stock.quantity,
+              stockId: stock.id,
+            };
+          }
+          return product;
+        });
+      }
+
+      setProducts(productsData);
 
       // Fetch shops first
       const shopsResponse = await shopsAPI.getShops({ limit: 100 });

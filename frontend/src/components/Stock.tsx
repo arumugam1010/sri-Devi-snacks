@@ -38,14 +38,27 @@ const Stock: React.FC = () => {
     stockId: null as number | null
   });
 
+  // Fix: Use product rate from products context for display and editing
+  const getProductRate = (productId: number) => {
+    const product = products.find(p => p.id === productId);
+    return product ? product.rate : 0;
+  };
+
   const filteredProducts = products.filter(product =>
     product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.unit.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalStockValue = products.reduce((total, product) => {
-    return total + (product.quantity * product.rate);
+    return total + (product.quantity * getProductRate(product.id));
   }, 0);
+
+  // Fix: Ensure rate and value are displayed correctly even if rate is 0 or undefined
+  const getProductValue = (product: Product) => {
+    const rate = getProductRate(product.id) || 0;
+    const quantity = product.quantity || 0;
+    return rate * quantity;
+  };
 
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,7 +301,7 @@ const Stock: React.FC = () => {
                         {product.unit}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {editingQuantityId === product.id ? (
                         <div className="flex items-center space-x-2">
                           <input
@@ -339,14 +352,14 @@ const Stock: React.FC = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <IndianRupee className="h-4 w-4 text-green-600 mr-1" />
-                        <span className="text-sm font-medium text-gray-900">{product.rate}</span>
-                      </div>
-                    </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <IndianRupee className="h-4 w-4 text-green-600 mr-1" />
+                    <span className="text-sm font-medium text-gray-900">{getProductRate(product.id)}</span>
+                  </div>
+                </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                      ₹{productValue.toLocaleString()}
+                      ₹{getProductValue(product).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     
