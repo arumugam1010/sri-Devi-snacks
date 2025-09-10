@@ -3,7 +3,7 @@ import { Calendar, Download, TrendingUp, DollarSign, Package, ShoppingCart, BarC
 import { useAppContext } from '../context/AppContext';
 
 const Reports: React.FC = () => {
-  const { bills, products } = useAppContext();
+  const { bills, products, shops } = useAppContext();
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'monthly' | 'shops' | 'returns' | 'products'>('daily');
 
   // Helper functions for weekly reports
@@ -347,7 +347,7 @@ const Reports: React.FC = () => {
         />
         <StatCard
           title="Active Shops"
-          value={new Set(bills.map(bill => bill.shop_id)).size.toString()}
+          value={shops.length.toString()}
           icon={TrendingUp}
           color="orange"
         />
