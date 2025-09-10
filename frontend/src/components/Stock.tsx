@@ -152,7 +152,8 @@ const Stock: React.FC = () => {
       alert('Stock not found for this product');
       return;
     }
-    const newQuantity = Math.max(0, product.quantity + amount);
+    // const newQuantity = Math.max(0, product.quantity + amount);
+    const newQuantity = product.quantity + amount;
     try {
       const response = await stocksAPI.updateStock(product.stockId, { quantity: newQuantity });
       if (response.success) {

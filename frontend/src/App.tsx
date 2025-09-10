@@ -93,7 +93,7 @@ interface UserData {
     clearTimeout(logoutTimer.current as  ReturnType<typeof setTimeout>);
     setIsAuthenticated(false);
     setUser(null);
-    // Remove localStorage remove to disable persistence
+    localStorage.removeItem('user');
   };
   
   if (isAuthenticated === null) {
