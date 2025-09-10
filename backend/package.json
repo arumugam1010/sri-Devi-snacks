@@ -31,6 +31,8 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
