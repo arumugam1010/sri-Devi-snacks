@@ -123,10 +123,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         })));
       }
 
-      // Fetch shops
+      // Fetch shops first
       const shopsResponse = await shopsAPI.getShops({ limit: 100 });
+      let fetchedShops: any[] = [];
       if (shopsResponse.success) {
-        setShops(shopsResponse.data.map((shop: any) => ({
+        fetchedShops = shopsResponse.data.map((shop: any) => ({
           id: shop.id,
           shop_name: shop.shopName,
           address: shop.address,
@@ -135,20 +136,39 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           gst: shop.gstNumber,
           status: shop.status.toLowerCase(),
           created_date: new Date(shop.createdAt).toISOString().split('T')[0],
-        })));
+        }));
+        setShops(fetchedShops);
       }
 
-      // Fetch schedules
+      // Fetch schedules and populate with shop data
       const schedulesResponse = await schedulesAPI.getSchedules();
       if (schedulesResponse.success) {
         const scheduleData = schedulesResponse.data;
         const weeklyScheduleData: DaySchedule[] = [
-          { day: 'Monday', shops: scheduleData.MONDAY?.map((s: any) => s.shop) || [] },
-          { day: 'Tuesday', shops: scheduleData.TUESDAY?.map((s: any) => s.shop) || [] },
-          { day: 'Wednesday', shops: scheduleData.WEDNESDAY?.map((s: any) => s.shop) || [] },
-          { day: 'Thursday', shops: scheduleData.THURSDAY?.map((s: any) => s.shop) || [] },
-          { day: 'Friday', shops: scheduleData.FRIDAY?.map((s: any) => s.shop) || [] },
-          { day: 'Saturday', shops: scheduleData.SATURDAY?.map((s: any) => s.shop) || [] },
+          { day: 'Monday', shops: scheduleData.MONDAY?.map((s: any) => {
+            const shop = fetchedShops.find((shop: any) => shop.id === s.shop?.id);
+            return shop || s.shop;
+          }).filter(Boolean) || [] },
+          { day: 'Tuesday', shops: scheduleData.TUESDAY?.map((s: any) => {
+            const shop = fetchedShops.find((shop: any) => shop.id === s.shop?.id);
+            return shop || s.shop;
+          }).filter(Boolean) || [] },
+          { day: 'Wednesday', shops: scheduleData.WEDNESDAY?.map((s: any) => {
+            const shop = fetchedShops.find((shop: any) => shop.id === s.shop?.id);
+            return shop || s.shop;
+          }).filter(Boolean) || [] },
+          { day: 'Thursday', shops: scheduleData.THURSDAY?.map((s: any) => {
+            const shop = fetchedShops.find((shop: any) => shop.id === s.shop?.id);
+            return shop || s.shop;
+          }).filter(Boolean) || [] },
+          { day: 'Friday', shops: scheduleData.FRIDAY?.map((s: any) => {
+            const shop = fetchedShops.find((shop: any) => shop.id === s.shop?.id);
+            return shop || s.shop;
+          }).filter(Boolean) || [] },
+          { day: 'Saturday', shops: scheduleData.SATURDAY?.map((s: any) => {
+            const shop = fetchedShops.find((shop: any) => shop.id === s.shop?.id);
+            return shop || s.shop;
+          }).filter(Boolean) || [] },
         ];
         setWeeklySchedule(weeklyScheduleData);
       }
@@ -174,8 +194,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           })),
         })));
       }
-
-      // Note: Schedule loading is handled by the Shops component to avoid conflicts
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
     } finally {
