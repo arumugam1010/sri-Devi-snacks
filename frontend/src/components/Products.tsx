@@ -309,8 +309,8 @@ const Products: React.FC = () => {
     setPriceEditValue(shopProduct.price.toString());
   };
 
-  const handlePriceSave = async (shopProductId: number) => {
-    const price = parseFloat(priceEditValue);
+  const handlePriceSave = async (shopProductId: number, newPrice?: number) => {
+    const price = newPrice !== undefined ? newPrice : parseFloat(priceEditValue);
     if (!isNaN(price)) {
       try {
         const response = await productsAPI.updateShopProduct(shopProductId, { price });
@@ -738,11 +738,34 @@ const Products: React.FC = () => {
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                                <span className="text-sm font-medium text-gray-900">
-                                  {pricing ? `₹${pricing.price}` : 'Not set'}
-                                </span>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => {
+                                    if (pricing) {
+                                      const newPrice = pricing.price + 1;
+                                      handlePriceSave(pricing.id, newPrice);
+                                    }
+                                  }}
+                                  className="bg-green-600 text-white p-1 rounded hover:bg-green-700"
+                                  title="Increase Price"
+                                >
+                                  +
+                                </button>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {pricing ? `₹${pricing.price}` : `₹0`}
+                                  </span>
+                                <button
+                                  onClick={() => {
+                                    if (pricing && pricing.price > 0) {
+                                      const newPrice = pricing.price - 1;
+                                      handlePriceSave(pricing.id, newPrice);
+                                    }
+                                  }}
+                                  className="bg-red-600 text-white p-1 rounded hover:bg-red-700"
+                                  title="Decrease Price"
+                                >
+                                  -
+                                </button>
                               </div>
                             )}
                           </td>
