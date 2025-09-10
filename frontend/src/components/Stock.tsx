@@ -119,21 +119,39 @@ const Stock: React.FC = () => {
     const quantity = parseInt(quantityEditValue);
     if (!isNaN(quantity) && quantity >= 0) {
       const product = products.find(p => p.id === productId);
-      if (!product || !product.stockId) {
-        alert('Stock not found for this product');
+      if (!product) {
+        alert('Product not found');
         setEditingQuantityId(null);
         return;
       }
       try {
-        const response = await stocksAPI.updateStock(product.stockId, { quantity });
-        if (response.success) {
-          setProducts(products.map(product =>
-            product.id === productId
-              ? { ...product, quantity: quantity }
-              : product
-          ));
+        if (!product.stockId) {
+          // Create stock entry if missing
+          const createResponse = await stocksAPI.createStock({
+            productId: product.id,
+            quantity,
+            rate: product.rate,
+          });
+          if (createResponse.success) {
+            setProducts(products.map(p =>
+              p.id === productId
+                ? { ...p, quantity: quantity, stockId: createResponse.data.id }
+                : p
+            ));
+          } else {
+            alert(createResponse.message || 'Failed to create stock');
+          }
         } else {
-          alert(response.message || 'Failed to update stock quantity');
+          const response = await stocksAPI.updateStock(product.stockId, { quantity });
+          if (response.success) {
+            setProducts(products.map(product =>
+              product.id === productId
+                ? { ...product, quantity: quantity }
+                : product
+            ));
+          } else {
+            alert(response.message || 'Failed to update stock quantity');
+          }
         }
       } catch (err: any) {
         alert(err.message || 'Error updating stock quantity');
@@ -148,22 +166,39 @@ const Stock: React.FC = () => {
 
   const handleQuantityAdjust = async (productId: number, amount: number) => {
     const product = products.find(p => p.id === productId);
-    if (!product || !product.stockId) {
-      alert('Stock not found for this product');
+    if (!product) {
+      alert('Product not found');
       return;
     }
-    // const newQuantity = Math.max(0, product.quantity + amount);
     const newQuantity = product.quantity + amount;
     try {
-      const response = await stocksAPI.updateStock(product.stockId, { quantity: newQuantity });
-      if (response.success) {
-        setProducts(products.map(product =>
-          product.id === productId
-            ? { ...product, quantity: newQuantity }
-            : product
-        ));
+      if (!product.stockId) {
+        // Create stock entry if missing
+        const createResponse = await stocksAPI.createStock({
+          productId: product.id,
+          quantity: newQuantity,
+          rate: product.rate,
+        });
+        if (createResponse.success) {
+          setProducts(products.map(p =>
+            p.id === productId
+              ? { ...p, quantity: newQuantity, stockId: createResponse.data.id }
+              : p
+          ));
+        } else {
+          alert(createResponse.message || 'Failed to create stock');
+        }
       } else {
-        alert(response.message || 'Failed to update stock quantity');
+        const response = await stocksAPI.updateStock(product.stockId, { quantity: newQuantity });
+        if (response.success) {
+          setProducts(products.map(product =>
+            product.id === productId
+              ? { ...product, quantity: newQuantity }
+              : product
+          ));
+        } else {
+          alert(response.message || 'Failed to update stock quantity');
+        }
       }
     } catch (err: any) {
       alert(err.message || 'Error updating stock quantity');

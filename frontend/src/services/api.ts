@@ -270,6 +270,13 @@ export const stocksAPI = {
     return authenticatedFetch(`${API_BASE_URL}/stocks`);
   },
 
+  createStock: async (stockData: { productId: number; quantity: number; rate?: number }) => {
+    return authenticatedFetch(`${API_BASE_URL}/stocks`, {
+      method: 'POST',
+      body: JSON.stringify(stockData),
+    });
+  },
+
   updateStock: async (stockId: number, stockData: { quantity: number; rate?: number }) => {
     return authenticatedFetch(`${API_BASE_URL}/stocks/${stockId}`, {
       method: 'PUT',
