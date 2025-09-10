@@ -430,12 +430,15 @@ const Billing: React.FC = () => {
       id: `B${String(nextBillNumber).padStart(3, '0')}`,
       shop_id: selectedShop,
       shop_name: currentShop?.shop_name || '',
-      bill_date: new Date().toISOString().split('T')[0],
+      bill_date: new Date().toISOString(),
       total_amount: finalTotal,
       received_amount: receivedAmount,
       pending_amount: pendingAmount,
       status: billStatus,
-      items: [...currentBill]
+      items: currentBill.map(item => ({
+        ...item,
+        rate: item.price
+      }))
     };
 
     // Mark all pending bills as completed since they're being paid through this bill
@@ -592,7 +595,7 @@ const Billing: React.FC = () => {
       id: `B${String(bills.length + 1).padStart(3, '0')}`,
       shop_id: selectedShop,
       shop_name: currentShop?.shop_name || '',
-      bill_date: new Date().toISOString().split('T')[0],
+      bill_date: new Date().toISOString(),
       total_amount: finalTotal,
       received_amount: receivedAmount,
       pending_amount: pendingAmount,
@@ -808,7 +811,7 @@ const Billing: React.FC = () => {
                       <div>
                         <p className="font-medium text-sm text-gray-900">{bill.id}</p>
                         <p className="text-xs text-gray-500">{bill.shop_name}</p>
-                        <p className="text-xs text-gray-500">{bill.bill_date}</p>
+                        <p className="text-xs text-gray-500">{new Date(bill.bill_date).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-sm">₹{bill.pending_amount}</p>
@@ -1769,7 +1772,7 @@ const Billing: React.FC = () => {
                         )}
                       </p>
                       <p className="text-sm text-gray-700">
-                              <span className="font-bold">Date:</span> <span className="font-bold">{selectedBillForView?.bill_date || new Date().toLocaleDateString()}</span>
+                              <span className="font-bold">Date:</span> <span className="font-bold">{selectedBillForView ? new Date(selectedBillForView.bill_date).toLocaleString() : new Date().toLocaleDateString()}</span>
                       </p>
                     </div>
                   )}
@@ -1781,7 +1784,7 @@ const Billing: React.FC = () => {
                 <div className="mb-4">
                   <div className="flex justify-between">
                     <div>Bill ID: {selectedBillForView.id}</div>
-                    <div>Date: {selectedBillForView.bill_date}</div>
+                    <div>Date: {new Date(selectedBillForView.bill_date).toLocaleString()}</div>
                   </div>
                   <div className="flex justify-between">
                     <div>Shop: {selectedBillForView.shop_name}</div>
@@ -2048,7 +2051,7 @@ const Billing: React.FC = () => {
                               <div class="bill-no"><strong>Bill No:</strong> ${billId}</div>
                               <div class="shop-info"><strong>Shop:</strong> ${shopName}</div>
                               <div class="shop-gst"><strong>Shop GST No:</strong> ${selectedBillForView.shop_id === 1 ? '33BBBBB5678B2Y6' : selectedBillForView.shop_id === 2 ? '33CCCCC9012C3Z7' : selectedBillForView.shop_id === 3 ? '33DDDDD3456D4A8' : ''}</div>
-                              <div class="bill-date"><strong>Date:</strong> ${selectedBillForView?.bill_date || new Date().toLocaleDateString()}</div>
+                              <div class="bill-date"><strong>Date:</strong> ${selectedBillForView ? new Date(selectedBillForView.bill_date).toLocaleString() : new Date().toLocaleDateString()}</div>
                               <div class="dashed-line"></div>
                             </div>
                         `);
