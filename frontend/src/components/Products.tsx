@@ -338,11 +338,13 @@ const Products: React.FC = () => {
   const handleAddPricing = async (productId: number) => {
     if (!selectedShop) return;
 
+    const productPrice = products.find(p => p.id === productId)?.price || 0;
+
     try {
       const response = await productsAPI.createShopProduct({
         shopId: selectedShop,
         productId: productId,
-        price: 0
+        price: productPrice
       });
 
       if (response.success) {
@@ -363,7 +365,7 @@ const Products: React.FC = () => {
           setShopProducts(fetchedShopProducts);
         }
         setEditingPriceId(response.data.id);
-        setPriceEditValue('0');
+        setPriceEditValue(productPrice.toString());
       } else {
         alert(response.message || 'Failed to add pricing');
       }
@@ -752,7 +754,7 @@ const Products: React.FC = () => {
                                   +
                                 </button>
                                   <span className="text-sm font-medium text-gray-900">
-                                    {pricing ? `₹${pricing.price}` : `₹0`}
+                                    {pricing ? `₹${pricing.price}` : `₹${product.price || 0}`}
                                   </span>
                                 <button
                                   onClick={() => {
