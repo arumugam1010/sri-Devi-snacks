@@ -2,45 +2,59 @@ import React, { useState, useEffect } from 'react';
 import { Store, Package, Receipt, TrendingUp, DollarSign, Users, ShoppingCart, ArrowUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { dashboardAPI } from '../services/api';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { products, bills, shops } = useAppContext();
-  
-  // Get today's date in the format 'YYYY-MM-DD'
-  const today = new Date().toISOString().split('T')[0];
 
-  // Calculate stats from context data
+  // State for dashboard stats from backend
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Calculate stats from context data (for other stats not from backend)
   const totalProducts = products.length;
-  const todaysBills = bills.filter(bill => bill.bill_date === today).length;
-  const todaysRevenue = bills
-    .filter(bill => bill.bill_date === today)
-    .reduce((sum, bill) => sum + bill.received_amount, 0);
   const pendingBills = bills.filter(bill => bill.status === 'PENDING').length;
-  
+
   const [stats, setStats] = useState({
     totalShops: shops.filter(shop => shop.status === 'active').length,
     totalProducts,
-    todaysBills,
-    todaysRevenue,
+    todaysBills: 0,
+    todaysRevenue: 0,
     pendingReturns: 0,
     activeOrders: pendingBills
   });
 
-  // Update stats when context data changes
+  // Fetch dashboard stats from backend
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const fetchDashboardStats = async () => {
+      try {
+        setLoading(true);
+        const response = await dashboardAPI.getDashboard();
+        if (response.success) {
+          setDashboardStats(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
+
+  // Update stats when context data or dashboard stats change
+  useEffect(() => {
     setStats({
       totalShops: shops.filter(shop => shop.status === 'active').length,
       totalProducts: products.length,
-      todaysBills: bills.filter(bill => bill.bill_date === today).length,
-      todaysRevenue: bills
-        .filter(bill => bill.bill_date === today)
-        .reduce((sum, bill) => sum + bill.received_amount, 0),
+      todaysBills: dashboardStats?.bills?.today || 0,
+      todaysRevenue: dashboardStats?.revenue?.today || 0,
       pendingReturns: 0,
       activeOrders: bills.filter(bill => bill.status === 'PENDING').length
     });
-  }, [products, bills, shops]);
+  }, [products, bills, shops, dashboardStats]);
 
   // Get recent bills with proper time formatting
   const recentBills = bills
@@ -102,6 +116,14 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

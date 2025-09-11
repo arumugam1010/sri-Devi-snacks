@@ -312,6 +312,6 @@ export const schedulesAPI = {
 // Dashboard API
 export const dashboardAPI = {
   getDashboard: async () => {
-    return authenticatedFetch(`${API_BASE_URL}/dashboard`);
+    return authenticatedFetch(`${API_BASE_URL}/dashboard/stats`);
   },
 };
