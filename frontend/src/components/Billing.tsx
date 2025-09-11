@@ -1108,7 +1108,7 @@ const Billing: React.FC = () => {
                       <option value="">Select a product...</option>
                       {allProductsForShop.map(product => (
                         <option key={product.product_id} value={product.product_id}>
-                          {product.product_name} - ₹{product.price}/{product.unit}
+                          {product.product_name}
                           {product.price === 0 && ' (Set price in Products section)'}
                         </option>
                       ))}
