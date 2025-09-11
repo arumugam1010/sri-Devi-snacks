@@ -916,17 +916,69 @@ const Billing: React.FC = () => {
         </div>
       )}
 
-      {/* Pending Bill Alert */}
+      {/* Enhanced Pending Bill Alert */}
       {showPendingBillAlert && pendingBills.length > 0 && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Pending Bills Found!</strong>
-          <span className="block sm:inline"> Shop {currentShop?.shop_name} has {pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''} with total ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)} due.</span>
-          <button
-            onClick={() => setShowPendingBillAlert(false)}
-            className="absolute top-0 right-0 px-4 py-3"
-          >
-            <span className="text-yellow-700">×</span>
-          </button>
+        <div className="bg-gradient-to-r from-red-50 to-yellow-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg shadow-sm">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-red-800">
+                  Outstanding Balance Alert
+                </h3>
+                <button
+                  onClick={() => setShowPendingBillAlert(false)}
+                  className="ml-4 text-red-400 hover:text-red-600 transition-colors"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              <div className="mt-2">
+                <p className="text-sm text-red-700">
+                  <span className="font-medium">{currentShop?.shop_name}</span> has{' '}
+                  <span className="font-semibold">{pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''}</span>{' '}
+                  with a total outstanding balance of{' '}
+                  <span className="font-bold text-lg">₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toLocaleString()}</span>
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {pendingBills.slice(0, 3).map((bill, index) => (
+                    <div key={bill.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      {bill.id}: ₹{bill.pending_amount.toLocaleString()}
+                    </div>
+                  ))}
+                  {pendingBills.length > 3 && (
+                    <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      +{pendingBills.length - 3} more
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 flex space-x-3">
+                  <button
+                    onClick={() => setIsPayPendingMode(true)}
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
+                  >
+                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z" />
+                    </svg>
+                    Pay Now
+                  </button>
+                  <button
+                    onClick={() => setShowPendingBillAlert(false)}
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  >
+                    Continue Billing
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
