@@ -204,19 +204,21 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
         })),
       });
 
-      // Update stock quantities
+      // Update stock quantities (only for positive quantities, not returns)
       for (const item of billData.items) {
-        const stock = await tx.stock.findUnique({
-          where: { productId: item.productId },
-        });
-
-        if (stock) {
-          await tx.stock.update({
+        if (item.quantity > 0) { // Only reduce stock for sales, not returns
+          const stock = await tx.stock.findUnique({
             where: { productId: item.productId },
-            data: {
-              quantity: Math.max(0, stock.quantity - item.quantity),
-            },
           });
+
+          if (stock) {
+            await tx.stock.update({
+              where: { productId: item.productId },
+              data: {
+                quantity: Math.max(0, stock.quantity - item.quantity),
+              },
+            });
+          }
         }
       }
 

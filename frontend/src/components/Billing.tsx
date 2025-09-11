@@ -85,24 +85,8 @@ const Billing: React.FC = () => {
   const [hasPrinted, setHasPrinted] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<{financialYear: string; monthName: string} | null>(null);
 
-  // Previous bills for returns (mock data)
-  const [previousBills] = useState<Bill[]>([
-    {
-      id: 'B001',
-      shop_id: 1,
-      shop_name: 'Metro Store',
-      bill_date: '2024-01-15',
-      total_amount: 1250,
-      received_amount: 1000,
-      pending_amount: 250,
-      status: 'pending',
-      items: [
-        { id: 1, product_id: 1, product_name: 'Rice Basmati', price: 120, quantity: 5, amount: 600, unit: 'kg', hsn_code: '10063010' },
-        { id: 2, product_id: 2, product_name: 'Wheat Flour', price: 45, quantity: 10, amount: 450, unit: 'kg', hsn_code: '11010000' },
-        { id: 3, product_id: 3, product_name: 'Sugar', price: 55, quantity: 4, amount: 200, unit: 'kg', hsn_code: '17019990' }
-      ]
-    }
-  ]);
+  // State for selected bill for returns
+  const [selectedBillForReturn, setSelectedBillForReturn] = useState<Bill | null>(null);
 
   const [productForm, setProductForm] = useState({
     product_id: '',
@@ -476,9 +460,10 @@ const Billing: React.FC = () => {
 
     // Initialize return quantities for all products
     const initialReturnQuantities: {[key: number]: number} = {};
-    allProductsForShop.forEach(product => {
-      initialReturnQuantities[product.product_id] = 0;
+    products.forEach(product => {
+      initialReturnQuantities[product.id] = 0;
     });
+
     setReturnQuantities(initialReturnQuantities);
     setShowReturnModal(true);
   };
@@ -1617,11 +1602,10 @@ const Billing: React.FC = () => {
               </div>
               
               <div className="mb-6">
-                <h4 className="font-medium text-gray-900 mb-2">Previous Bill</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Process Returns for {currentShop?.shop_name}</h4>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Bill ID: B001</p>
-                  <p className="text-sm text-gray-600">Date: 2024-01-15</p>
-                  <p className="text-sm text-gray-600">Total: ₹1250</p>
+                  <p className="text-sm text-gray-600">All products are available for return processing</p>
+                  <p className="text-sm text-gray-600">Enter quantities for products to be returned</p>
                 </div>
               </div>
  
@@ -1631,25 +1615,28 @@ const Billing: React.FC = () => {
               <div className="mb-4">
                 <div className="font-bold mb-2">Return Items</div>
                 <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-                
-                {previousBills[0]?.items.map((item) => {
-                  const returnQuantity = returnQuantities[item.product_id] || 0;
-                  const returnAmount = returnQuantity * item.price;
-                  
+
+                {products.map((product) => {
+                  const shopPricing = shopProducts.find(sp =>
+                    sp.shop_id === selectedShop && sp.product_id === product.id
+                  );
+                  const price = shopPricing ? shopPricing.price : product.price;
+                  const returnQuantity = returnQuantities[product.id] || 0;
+                  const returnAmount = returnQuantity * price;
+
                   return (
-                    <div key={`return-input-${item.id}`} className="grid grid-cols-4 gap-4 py-2 items-center">
-                      <div>{item.product_name}</div>
+                    <div key={`return-input-${product.id}`} className="grid grid-cols-4 gap-4 py-2 items-center">
+                      <div>{product.product_name}</div>
                       <div className="text-right">
                         <input
                           type="number"
                           min="0"
-                          max={item.quantity}
                           value={returnQuantity}
-                          onChange={(e) => handleReturnQuantityChange(item.product_id, parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleReturnQuantityChange(product.id, parseInt(e.target.value) || 0)}
                           className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-right"
                         />
                       </div>
-                      <div className="text-right">₹{item.price}</div>
+                      <div className="text-right">₹{price}</div>
                       <div className="text-right text-red-600">₹{returnAmount > 0 ? `-${returnAmount}` : '0'}</div>
                     </div>
                   );
@@ -1661,32 +1648,32 @@ const Billing: React.FC = () => {
               {/* Return Calculations */}
               <div className="ml-auto w-64">
                 <div className="flex justify-between py-1">
-                  <div>Subtotal:</div>
-                  <div>₹{
-                    previousBills[0]?.items.reduce((sum, item) => sum + item.amount, 0) || 0
-                  }</div>
-                </div>
-                
-                <div className="flex justify-between py-1">
                   <div>Return Amount:</div>
                   <div className="text-red-600">₹-{
-                    previousBills[0]?.items.reduce((sum, item) => {
-                      const returnQuantity = returnQuantities[item.product_id] || 0;
-                      return sum + (returnQuantity * item.price);
-                    }, 0) || 0
+                    products.reduce((sum, product) => {
+                      const shopPricing = shopProducts.find(sp =>
+                        sp.shop_id === selectedShop && sp.product_id === product.id
+                      );
+                      const price = shopPricing ? shopPricing.price : product.price;
+                      const returnQuantity = returnQuantities[product.id] || 0;
+                      return sum + (returnQuantity * price);
+                    }, 0)
                   }</div>
                 </div>
-                
+
                 <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-                
+
                 <div className="flex justify-between py-1 font-bold">
-                  <div>Final Total:</div>
-                  <div>₹{
-                    (previousBills[0]?.items.reduce((sum, item) => sum + item.amount, 0) || 0) - 
-                    (previousBills[0]?.items.reduce((sum, item) => {
-                      const returnQuantity = returnQuantities[item.product_id] || 0;
-                      return sum + (returnQuantity * item.price);
-                    }, 0) || 0)
+                  <div>Total Return Value:</div>
+                  <div className="text-red-600">₹-{
+                    products.reduce((sum, product) => {
+                      const shopPricing = shopProducts.find(sp =>
+                        sp.shop_id === selectedShop && sp.product_id === product.id
+                      );
+                      const price = shopPricing ? shopPricing.price : product.price;
+                      const returnQuantity = returnQuantities[product.id] || 0;
+                      return sum + (returnQuantity * price);
+                    }, 0)
                   }</div>
                 </div>
               </div>
