@@ -163,7 +163,7 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
   // Calculate totals
   let totalAmount = 0;
   const billItems = (billData.items || []).map(item => {
-    const amount = item.quantity * item.rate;
+    const amount = Math.round((item.quantity * item.rate) * 100) / 100;
     totalAmount += amount;
     return {
       productId: item.productId,
@@ -173,8 +173,8 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
     };
   });
 
-  const receivedAmount = billData.receivedAmount || 0;
-  const pendingAmount = totalAmount - receivedAmount;
+  const receivedAmount = Math.round((billData.receivedAmount || 0) * 100) / 100;
+  const pendingAmount = Math.round((totalAmount - receivedAmount) * 100) / 100;
   const isPaymentBill = (billData.items || []).length === 0 && receivedAmount > 0;
   const shouldApplyToPending = isPaymentBill && billData.applyToPending === true;
 
@@ -216,8 +216,8 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
         if (remainingPayment <= 0) break;
 
         const paymentAmount = Math.min(remainingPayment, pendingBill.pendingAmount);
-        const newReceivedAmount = pendingBill.receivedAmount + paymentAmount;
-        const newPendingAmount = pendingBill.pendingAmount - paymentAmount;
+        const newReceivedAmount = Math.round((pendingBill.receivedAmount + paymentAmount) * 100) / 100;
+        const newPendingAmount = Math.round((pendingBill.pendingAmount - paymentAmount) * 100) / 100;
         const newStatus = newPendingAmount <= 0 ? 'COMPLETED' : 'PENDING';
 
         await tx.bill.update({
@@ -230,7 +230,7 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
         });
 
         console.log(`Applied ₹${paymentAmount} to bill ${pendingBill.id}, new status: ${newStatus}`);
-        remainingPayment -= paymentAmount;
+        remainingPayment = Math.round((remainingPayment - paymentAmount) * 100) / 100;
       }
 
       console.log(`Payment application completed. Remaining payment: ₹${remainingPayment}`);
@@ -329,7 +329,9 @@ router.put('/:id', authenticateToken, requireUser, async (req: express.Request, 
     let updateData: any = { ...billData };
 
     if (billData.receivedAmount !== undefined) {
-      const pendingAmount = currentBill.totalAmount - billData.receivedAmount;
+      const roundedReceivedAmount = Math.round(billData.receivedAmount * 100) / 100;
+      const pendingAmount = Math.round((currentBill.totalAmount - roundedReceivedAmount) * 100) / 100;
+      updateData.receivedAmount = roundedReceivedAmount;
       updateData.pendingAmount = pendingAmount;
 
       // Update status based on pending amount
