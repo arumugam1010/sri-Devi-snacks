@@ -75,7 +75,7 @@ const Billing: React.FC = () => {
   const [returnQuantities, setReturnQuantities] = useState<{[key: number]: number}>({});
   const [selectedBillForView, setSelectedBillForView] = useState<Bill | null>(null);
   const [showBillingInterface, setShowBillingInterface] = useState(false);
-  const [receivedAmount, setReceivedAmount] = useState<number>(0);
+  const [receivedAmount, setReceivedAmount] = useState<string>("");
   const [showPendingBillAlert, setShowPendingBillAlert] = useState(false);
   const [pendingBills, setPendingBills] = useState<Bill[]>([]);
   const [isPayPendingMode, setIsPayPendingMode] = useState(false);
@@ -339,8 +339,8 @@ const Billing: React.FC = () => {
     }
 
     // If no items in bill but there are pending bills and received amount > 0
-    if (currentBill.length === 0 && pendingBills.length > 0 && receivedAmount > 0) {
-      let remainingPayment = receivedAmount;
+    if (currentBill.length === 0 && pendingBills.length > 0 && parseFloat(receivedAmount || "0") > 0) {
+      let remainingPayment = parseFloat(receivedAmount || "0");
       const updatedBills = [...bills];
       const updatedPendingBills = [...pendingBills];
 
@@ -373,14 +373,14 @@ const Billing: React.FC = () => {
       }
 
       setBills(updatedBills);
-      
+
       // Update pending bills state, filtering out completed bills
       const newPendingBills = updatedPendingBills.filter(bill => bill.pending_amount > 0);
       setPendingBills(newPendingBills);
+
+    setReceivedAmount("0");
       
-      setReceivedAmount(0);
-      
-      const totalPaid = receivedAmount - remainingPayment;
+      const totalPaid = parseFloat(receivedAmount) - remainingPayment;
       const remainingBalance = newPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
       alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${remainingBalance}`);
       return;
@@ -407,7 +407,7 @@ const Billing: React.FC = () => {
     finalTotal += totalPendingAmount;
 
     // Calculate pending amount including taxes
-    const pendingAmount = Math.max(0, finalTotal - receivedAmount);
+    const pendingAmount = Math.max(0, finalTotal - parseFloat(receivedAmount || "0"));
     const billStatus = pendingAmount > 0 ? 'pending' : 'completed';
 
     // Generate bill ID based on financial year
@@ -432,7 +432,7 @@ const Billing: React.FC = () => {
       shop_name: currentShop?.shop_name || '',
       bill_date: new Date().toISOString(),
       total_amount: finalTotal,
-      received_amount: receivedAmount,
+      received_amount: parseFloat(receivedAmount || "0"),
       pending_amount: pendingAmount,
       status: billStatus,
       items: currentBill.map(item => ({
@@ -456,7 +456,7 @@ const Billing: React.FC = () => {
     addBill(newBill);
     setCurrentBill([]);
     setReturnItems([]);
-    setReceivedAmount(0);
+    setReceivedAmount("0");
     setPendingBills([]);
     setShowPendingBillAlert(false);
     setSelectedShop(null);
@@ -589,7 +589,7 @@ const Billing: React.FC = () => {
     finalTotal += totalPendingAmount;
 
     // Calculate pending amount including taxes
-    const pendingAmount = Math.max(0, finalTotal - receivedAmount);
+    const pendingAmount = Math.max(0, finalTotal - parseFloat(receivedAmount || "0"));
 
     const billForPayment: Bill = {
       id: `B${String(bills.length + 1).padStart(3, '0')}`,
@@ -597,7 +597,7 @@ const Billing: React.FC = () => {
       shop_name: currentShop?.shop_name || '',
       bill_date: new Date().toISOString(),
       total_amount: finalTotal,
-      received_amount: receivedAmount,
+      received_amount: parseFloat(receivedAmount || "0"),
       pending_amount: pendingAmount,
       status: pendingAmount > 0 ? 'pending' : 'completed',
       items: [...currentBill]
@@ -639,7 +639,7 @@ const Billing: React.FC = () => {
 
     // Reset states
     setCurrentBill([]);
-    setReceivedAmount(0);
+    setReceivedAmount("0");
     setPendingBills([]);
     setShowPendingBillAlert(false);
     setSelectedShop(null);
@@ -727,7 +727,7 @@ const Billing: React.FC = () => {
           { /* Remove Pay with GPay button here as per feedback */ }
           <button
             onClick={handleSaveBill}
-            disabled={(currentBill.length > 0 && !hasPrinted) || (currentBill.length === 0 && (pendingBills.length === 0 || receivedAmount <= 0))}
+            disabled={(currentBill.length > 0 && !hasPrinted) || (currentBill.length === 0 && (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0))}
             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition"
           >
             <Receipt className="h-5 w-5 mr-2" />
@@ -1039,7 +1039,8 @@ const Billing: React.FC = () => {
                             min="0"
                             max={totalAmount + pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
                             value={receivedAmount}
-                            onChange={(e) => setReceivedAmount(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            onChange={(e) => setReceivedAmount(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </div>
@@ -1067,7 +1068,7 @@ const Billing: React.FC = () => {
                             id="pendingPaymentAmount"
                             min="0"
                             max={pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
-                            value={pendingPaymentAmount}
+                            value={pendingPaymentAmount.toString()}
                             onChange={(e) => setPendingPaymentAmount(parseFloat(e.target.value) || 0)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Enter payment amount"

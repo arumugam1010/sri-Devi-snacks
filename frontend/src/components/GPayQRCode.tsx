@@ -24,10 +24,10 @@ const GPayQRCode: React.FC<GPayQRCodeProps> = ({
   const [copied, setCopied] = React.useState(false);
   const [paymentStatus, setPaymentStatus] = React.useState<'pending' | 'success' | 'failed'>('pending');
   const [transactionId, setTransactionId] = React.useState('');
-  const [amount, setAmount] = React.useState<number>(initialAmount);
+  const [amount, setAmount] = React.useState<string>(initialAmount > 0 ? initialAmount.toString() : "");
 
   // Generate UPI payment URL (reactive to amount changes)
-  const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(shopName)}&am=${amount}&cu=INR&tn=Bill ${billId}`;
+  const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(shopName)}&am=${parseFloat(amount) || 0}&cu=INR&tn=Bill ${billId}`;
 
   const copyUpiUrl = () => {
     navigator.clipboard.writeText(upiUrl);
@@ -44,7 +44,7 @@ const GPayQRCode: React.FC<GPayQRCodeProps> = ({
     setTransactionId(txId);
     setPaymentStatus('success');
     setTimeout(() => {
-      onPaymentSuccess(txId, amount);
+      onPaymentSuccess(txId, parseFloat(amount) || 0);
       onClose();
     }, 2000);
   };
@@ -85,7 +85,8 @@ const GPayQRCode: React.FC<GPayQRCodeProps> = ({
                   min="0"
                   max={initialAmount}
                   value={amount}
-                  onChange={(e) => setAmount(Math.max(0, Math.min(initialAmount, parseFloat(e.target.value) || 0)))}
+                  placeholder="0"
+                  onChange={(e) => setAmount(e.target.value)}
                   className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-center text-lg font-semibold text-green-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -152,7 +153,7 @@ const GPayQRCode: React.FC<GPayQRCodeProps> = ({
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h4 className="text-lg font-semibold text-green-600 mb-2">Payment Successful!</h4>
             <p className="text-sm text-gray-600">Transaction ID: {transactionId}</p>
-            <p className="text-sm text-gray-600">Amount: ₹{amount.toLocaleString()}</p>
+            <p className="text-sm text-gray-600">Amount: ₹{(parseFloat(amount) || 0).toLocaleString()}</p>
           </div>
         )}
 

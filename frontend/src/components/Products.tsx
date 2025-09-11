@@ -112,9 +112,9 @@ const Products: React.FC = () => {
   const [productForm, setProductForm] = useState({
     product_name: '',
     unit: 'kg',
-    gst: 5, // default gst value
+    gst: '', // default gst value as string
     hsn_code: '', // HSN code field
-    price: 0 // Product price field
+    price: '' // Product price field as string
   });
 
   const filteredProducts = products.filter(product =>
@@ -131,15 +131,15 @@ const Products: React.FC = () => {
         const updatedProductResponse = await productsAPI.updateProduct(editingProduct.id, {
           productName: productForm.product_name,
           unit: productForm.unit,
-          gst: productForm.gst,
+          gst: parseInt(productForm.gst) || 0,
           hsnCode: productForm.hsn_code,
-          price: productForm.price,
+          price: parseFloat(productForm.price) || 0,
         });
 
         if (updatedProductResponse.success) {
           setProducts(products.map(product =>
             product.id === editingProduct.id
-              ? { ...product, ...productForm }
+              ? { ...product, ...productForm, gst: parseInt(productForm.gst) || 0, price: parseFloat(productForm.price) || 0 }
               : product
           ));
           resetProductForm();
@@ -152,9 +152,9 @@ const Products: React.FC = () => {
         const apiProductData = {
           productName: productForm.product_name,
           unit: productForm.unit,
-          gst: productForm.gst,
+          gst: parseInt(productForm.gst) || 0,
           hsnCode: productForm.hsn_code,
-          price: productForm.price,
+          price: parseFloat(productForm.price) || 0,
         };
 
         // Import productsAPI at top: import { productsAPI } from '../services/api';
@@ -186,9 +186,9 @@ const Products: React.FC = () => {
     setProductForm({
       product_name: '',
       unit: 'kg',
-      gst: 5, // default gst value
+      gst: '', // default gst value as string
       hsn_code: '', // HSN code field
-      price: 0 // Product price field
+      price: '' // Product price field as string
     });
     setEditingProduct(null);
     setShowModal(false);
@@ -199,9 +199,9 @@ const Products: React.FC = () => {
     setProductForm({
       product_name: product.product_name,
       unit: product.unit,
-      gst: product.gst,
+      gst: product.gst.toString(),
       hsn_code: product.hsn_code,
-      price: product.price
+      price: product.price.toString()
     });
     setShowModal(true);
   };
@@ -718,14 +718,15 @@ const Products: React.FC = () => {
                             {pricing && editingPriceId === pricing.id ? (
                               <div className="flex items-center">
                                 <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={priceEditValue}
-                                  onChange={(e) => setPriceEditValue(e.target.value)}
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                                  autoFocus
-                                />
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                value={priceEditValue}
+                                onChange={(e) => setPriceEditValue(e.target.value)}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                                autoFocus
+                              />
                                 <button
                                   onClick={() => handlePriceSave(pricing.id)}
                                   className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
@@ -870,28 +871,29 @@ const Products: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     GST (%)
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={productForm.gst}
-                    onChange={(e) => setProductForm({ ...productForm, gst: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={productForm.gst}
+                      onChange={(e) => setProductForm({ ...productForm, gst: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Price (₹)
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={productForm.price}
-                    onChange={(e) => setProductForm({ ...productForm, price: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter product price"
-                  />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={productForm.price}
+                      onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
                   <button

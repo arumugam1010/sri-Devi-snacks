@@ -30,11 +30,11 @@ const Stock: React.FC = () => {
     product_name: '',
     unit: 'kg',
     status: 'active' as 'active' | 'inactive',
-    gst: 5,
-    quantity: 0,
-    rate: 0,
+    gst: '5',
+    quantity: '',
+    rate: '',
     hsn_code: '',
-    price: 0,
+    price: '',
     stockId: null as number | null
   });
 
@@ -64,17 +64,20 @@ const Stock: React.FC = () => {
     e.preventDefault();
     
     if (editingProduct) {
-      setProducts(products.map(product => 
-        product.id === editingProduct.id 
-          ? { ...product, ...productForm }
+      setProducts(products.map(product =>
+        product.id === editingProduct.id
+          ? { ...product, ...productForm, gst: parseInt(productForm.gst) || 0, quantity: parseInt(productForm.quantity) || 0, rate: parseFloat(productForm.rate) || 0, price: parseFloat(productForm.price) || 0 }
           : product
       ));
     } else {
       const newProduct: Product = {
         id: Math.max(...products.map(p => p.id)) + 1,
         ...productForm,
+        gst: parseInt(productForm.gst) || 0,
+        quantity: parseInt(productForm.quantity) || 0,
+        rate: parseFloat(productForm.rate) || 0,
+        price: parseFloat(productForm.price) || 0,
         created_date: new Date().toISOString().split('T')[0],
-        price: productForm.price,
         stockId: productForm.stockId
       };
       setProducts([...products, newProduct]);
@@ -88,11 +91,11 @@ const Stock: React.FC = () => {
       product_name: '',
       unit: 'kg',
       status: 'active',
-      gst: 5,
-      quantity: 0,
-      rate: 0,
+      gst: '',
+      quantity: '',
+      rate: '',
       hsn_code: '',
-      price: 0,
+      price: '',
       stockId: null
     });
     setEditingProduct(null);
@@ -105,11 +108,11 @@ const Stock: React.FC = () => {
       product_name: product.product_name,
       unit: product.unit,
       status: product.status,
-      gst: product.gst,
-      quantity: product.quantity,
-      rate: product.rate,
+      gst: product.gst.toString(),
+      quantity: product.quantity.toString(),
+      rate: product.rate.toString(),
       hsn_code: product.hsn_code,
-      price: product.price,
+      price: product.price.toString(),
       stockId: product.stockId
     });
     setShowModal(true);
@@ -143,7 +146,7 @@ const Stock: React.FC = () => {
           const createResponse = await stocksAPI.createStock({
             productId: product.id,
             quantity,
-            rate: product.rate,
+            rate: parseFloat(product.rate.toString()) || 0,
           });
           if (createResponse.success) {
             setProducts(products.map(p =>
@@ -420,7 +423,8 @@ const Stock: React.FC = () => {
                     min="0"
                     required
                     value={productForm.quantity}
-                    onChange={(e) => setProductForm({ ...productForm, quantity: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                    onChange={(e) => setProductForm({ ...productForm, quantity: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -434,7 +438,8 @@ const Stock: React.FC = () => {
                     step="0.01"
                     required
                     value={productForm.rate}
-                    onChange={(e) => setProductForm({ ...productForm, rate: parseFloat(e.target.value) || 0 })}
+                    placeholder="0"
+                    onChange={(e) => setProductForm({ ...productForm, rate: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -460,7 +465,8 @@ const Stock: React.FC = () => {
                     min="0"
                     max="100"
                     value={productForm.gst}
-                    onChange={(e) => setProductForm({ ...productForm, gst: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                    onChange={(e) => setProductForm({ ...productForm, gst: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
