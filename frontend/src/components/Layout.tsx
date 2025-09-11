@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Building2, 
-  LayoutDashboard, 
-  Store, 
-  Package, 
-  Receipt, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Store,
+  Package,
+  Receipt,
+  BarChart3,
   LogOut,
   Menu,
   X,
   Warehouse
 } from 'lucide-react';
+import Logo from '../assets/Logo.png';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,8 +50,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
           </div>
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
-              <Building2 className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">Agency Billing</span>
+              <img src={Logo} alt="Sri Devi Snacks Logo" className="h-8 w-8 mr-2" />
+              <span className="text-2xl font-bold text-gray-900">Sri Devi Snacks</span>
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {navigation.map((item) => (
@@ -78,9 +78,9 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
         <div className="flex-1 flex flex-col min-h-0 border-r border-gray-200 bg-white">
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-       <div className="flex items-center flex-shrink-0 px-4">
-
-  <span className="ml-2 text-xl font-bold text-gray-900">
+            <div className="flex items-center flex-shrink-0 px-4">
+  <img src={Logo} alt="Sri Devi Snacks Logo" className="h-8 w-8 mr-2" />
+  <span className="text-2xl font-bold text-gray-900">
     Sri Devi Snacks
   </span>
 </div>

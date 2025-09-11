@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Lock, User, Building2 } from 'lucide-react';
+import { Lock, User } from 'lucide-react';
 import { authAPI } from '../services/api';
+import Logo from '../assets/Logo.png';
 
 interface LoginProps {
   onLogin: (userData: any) => void;
@@ -36,10 +37,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Building2 className="h-8 w-8 text-blue-600" />
+            <img src={Logo} alt="Sri Devi Snacks Logo" className="h-15 w-15" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Agency Billing System</h1>
-          <p className="text-gray-600">Sign in to manage your billing operations</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Sri Devi Snacks</h1>
         </div>
 
         {error && (
