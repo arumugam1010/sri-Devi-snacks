@@ -26,7 +26,7 @@ interface Bill {
   total_amount: number;
   received_amount: number;
   pending_amount: number;
-  status: 'pending' | 'completed';
+  status: 'PENDING' | 'COMPLETED';
   items: BillItem[];
   payment_mode?: string;
   transaction_id?: string;
@@ -40,7 +40,7 @@ interface ReturnItem extends BillItem {
 }
 
 const Billing: React.FC = () => {
-  const { products, addBill, shopProducts } = useAppContext();
+  const { products, addBill, shopProducts, updateBill } = useAppContext();
   
   // Mock data
   const { weeklySchedule } = useAppContext();
@@ -72,6 +72,16 @@ const Billing: React.FC = () => {
   // Removed local savedBills state to use context bills instead
   // const [savedBills, setSavedBills] = useState<Bill[]>([]);
   const { bills, setBills } = useAppContext();
+
+  // Helper function to convert backend status to frontend status
+  const convertStatusToFrontend = (status: 'PENDING' | 'COMPLETED'): 'pending' | 'completed' => {
+    return status.toLowerCase() as 'pending' | 'completed';
+  };
+
+  // Helper function to convert frontend status to backend status
+  const convertStatusToBackend = (status: 'pending' | 'completed'): 'PENDING' | 'COMPLETED' => {
+    return status.toUpperCase() as 'PENDING' | 'COMPLETED';
+  };
   const [returnQuantities, setReturnQuantities] = useState<{[key: number]: number}>({});
   const [selectedBillForView, setSelectedBillForView] = useState<Bill | null>(null);
   const [showBillingInterface, setShowBillingInterface] = useState(false);
@@ -157,7 +167,7 @@ const Billing: React.FC = () => {
     
     // Check for pending bills for this shop
     const shopPendingBills = bills.filter(bill => 
-      bill.shop_id === shopId && bill.status === 'pending'
+      bill.shop_id === shopId && bill.status === 'PENDING'
     );
     
     if (shopPendingBills.length > 0) {
@@ -263,60 +273,56 @@ const Billing: React.FC = () => {
     setHasPrinted(false); // Reset print status when quantities are changed
   };
 
-  const handlePayPending = () => {
+  const handlePayPending = async () => {
     if (pendingBills.length === 0 || !selectedShop || pendingPaymentAmount <= 0) {
       return; // No validation messages, just silently return
     }
 
-    let remainingPayment = pendingPaymentAmount;
-    const updatedBills = [...bills];
-    const updatedPendingBills = [...pendingBills];
+    try {
+      let remainingPayment = pendingPaymentAmount;
+      const updatedPendingBills = [...pendingBills];
 
-    // Apply payment to bills in order (oldest first)
-    for (let i = 0; i < updatedPendingBills.length && remainingPayment > 0; i++) {
-      const bill = updatedPendingBills[i];
-      const paymentAmount = Math.min(remainingPayment, bill.pending_amount);
-      const remainingAmount = bill.pending_amount - paymentAmount;
-      
-      // Update the bill in the main bills array
-      const billIndex = updatedBills.findIndex(b => b.id === bill.id);
-      if (billIndex !== -1) {
-        updatedBills[billIndex] = {
+      // Apply payment to bills in order (oldest first)
+      for (let i = 0; i < updatedPendingBills.length && remainingPayment > 0; i++) {
+        const bill = updatedPendingBills[i];
+        const paymentAmount = Math.min(remainingPayment, bill.pending_amount);
+        const newReceivedAmount = bill.received_amount + paymentAmount;
+
+        // Update the bill via backend API
+        await updateBill(bill.id, {
+          receivedAmount: newReceivedAmount,
+        });
+
+        // Update the pending bill in our local state
+        updatedPendingBills[i] = {
           ...bill,
-          received_amount: bill.received_amount + paymentAmount,
-          pending_amount: remainingAmount,
-          status: remainingAmount === 0 ? 'completed' : 'pending'
+          received_amount: newReceivedAmount,
+          pending_amount: bill.pending_amount - paymentAmount,
+          status: (bill.pending_amount - paymentAmount) === 0 ? 'COMPLETED' : 'PENDING'
         };
-      }
-      
-      // Update the pending bill in our local state
-      updatedPendingBills[i] = {
-        ...bill,
-        received_amount: bill.received_amount + paymentAmount,
-        pending_amount: remainingAmount,
-        status: remainingAmount === 0 ? 'completed' : 'pending'
-      };
-      
-      remainingPayment -= paymentAmount;
-    }
 
-    setBills(updatedBills);
-    
-    // Update pending bills state, filtering out completed bills
-    const newPendingBills = updatedPendingBills.filter(bill => bill.pending_amount > 0);
-    setPendingBills(newPendingBills);
-    
-    // Reset payment amount but keep the mode
-    setPendingPaymentAmount(0);
-    
-    // Show success message
-    const totalPaid = pendingPaymentAmount - remainingPayment;
-    if (totalPaid > 0) {
-      alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${newPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}`);
+        remainingPayment -= paymentAmount;
+      }
+
+      // Update pending bills state, filtering out completed bills
+      const newPendingBills = updatedPendingBills.filter(bill => bill.pending_amount > 0);
+      setPendingBills(newPendingBills);
+
+      // Reset payment amount but keep the mode
+      setPendingPaymentAmount(0);
+
+      // Show success message
+      const totalPaid = pendingPaymentAmount - remainingPayment;
+      if (totalPaid > 0) {
+        alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${newPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}`);
+      }
+    } catch (error) {
+      console.error('Failed to update pending payments:', error);
+      alert('Failed to update pending payments. Please try again.');
     }
   };
 
-  const handleSaveBill = () => {
+  const handleSaveBill = async () => {
     if (!selectedShop) {
       alert('Please select a shop first');
       return;
@@ -341,7 +347,7 @@ const Billing: React.FC = () => {
             ...bill,
             received_amount: bill.received_amount + paymentAmount,
             pending_amount: remainingAmount,
-            status: remainingAmount === 0 ? 'completed' : 'pending'
+            status: remainingAmount === 0 ? 'COMPLETED' : 'PENDING'
           };
         }
         
@@ -350,7 +356,7 @@ const Billing: React.FC = () => {
           ...bill,
           received_amount: bill.received_amount + paymentAmount,
           pending_amount: remainingAmount,
-          status: remainingAmount === 0 ? 'completed' : 'pending'
+          status: remainingAmount === 0 ? 'COMPLETED' : 'PENDING'
         };
         
         remainingPayment -= paymentAmount;
@@ -392,7 +398,7 @@ const Billing: React.FC = () => {
 
     // Calculate pending amount including taxes
     const pendingAmount = Math.max(0, finalTotal - parseFloat(receivedAmount || "0"));
-    const billStatus = pendingAmount > 0 ? 'pending' : 'completed';
+    const billStatus = pendingAmount > 0 ? 'PENDING' : 'COMPLETED';
 
     // Generate bill ID based on financial year
     const billDate = new Date();
@@ -426,14 +432,12 @@ const Billing: React.FC = () => {
     };
 
     // Mark all pending bills as completed since they're being paid through this bill
-    let updatedBills = [...bills];
     if (pendingBills.length > 0) {
-      updatedBills = bills.map(bill => {
-        const pendingBill = pendingBills.find(pb => pb.id === bill.id);
-        return pendingBill 
-          ? { ...bill, status: 'completed', pending_amount: 0 }
-          : bill;
-      });
+      for (const pendingBill of pendingBills) {
+        await updateBill(pendingBill.id, {
+          receivedAmount: pendingBill.received_amount + pendingBill.pending_amount,
+        });
+      }
     }
 
     // Use the context's addBill method which automatically handles stock updates
@@ -552,86 +556,90 @@ const Billing: React.FC = () => {
     setReturnQuantities({});
   };
 
-  const handleGPayPayment = () => {
+  const handleGPayPayment = async () => {
     if (!selectedShop) {
       alert('Please select a shop first');
       return;
     }
 
-    // Calculate final total including returns and taxes
-    const returnAmount = currentBill
-      .filter(item => item.quantity < 0)
-      .reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0);
-    
-    const billingAmount = currentBill
-      .filter(item => item.quantity > 0)
-      .reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0);
-    
-    let finalTotal = billingAmount + returnAmount; // returnAmount is negative
+    try {
+      // Calculate final total including returns and taxes
+      const returnAmount = currentBill
+        .filter(item => item.quantity < 0)
+        .reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0);
 
-    // Add total pending amount from all pending bills
-    const totalPendingAmount = pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
-    finalTotal += totalPendingAmount;
+      const billingAmount = currentBill
+        .filter(item => item.quantity > 0)
+        .reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0);
 
-    // Calculate pending amount including taxes
-    const pendingAmount = Math.max(0, finalTotal - parseFloat(receivedAmount || "0"));
+      let finalTotal = billingAmount + returnAmount; // returnAmount is negative
 
-    const billForPayment: Bill = {
-      id: `B${String(bills.length + 1).padStart(3, '0')}`,
-      shop_id: selectedShop,
-      shop_name: currentShop?.shop_name || '',
-      bill_date: new Date().toISOString(),
-      total_amount: finalTotal,
-      received_amount: parseFloat(receivedAmount || "0"),
-      pending_amount: pendingAmount,
-      status: pendingAmount > 0 ? 'pending' : 'completed',
-      items: [...currentBill]
-    };
+      // Add total pending amount from all pending bills
+      const totalPendingAmount = pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
+      finalTotal += totalPendingAmount;
 
-    setCurrentBillForPayment(billForPayment);
-    setShowGPayQR(true);
+      // Calculate pending amount including taxes
+      const pendingAmount = Math.max(0, finalTotal - parseFloat(receivedAmount || "0"));
+
+      const billForPayment: Bill = {
+        id: `B${String(bills.length + 1).padStart(3, '0')}`,
+        shop_id: selectedShop,
+        shop_name: currentShop?.shop_name || '',
+        bill_date: new Date().toISOString(),
+        total_amount: finalTotal,
+        received_amount: parseFloat(receivedAmount || "0"),
+        pending_amount: pendingAmount,
+        status: pendingAmount > 0 ? 'PENDING' : 'COMPLETED',
+        items: [...currentBill]
+      };
+
+      // First save the bill to backend to get the actual ID
+      await addBill(billForPayment);
+
+      // Get the newly created bill from the bills array (it will have the backend ID)
+      const savedBill = bills[bills.length - 1];
+      if (savedBill) {
+        setCurrentBillForPayment(savedBill);
+        setShowGPayQR(true);
+      } else {
+        alert('Failed to save bill. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to save bill for payment:', error);
+      alert('Failed to prepare bill for payment. Please try again.');
+    }
   };
 
-  const handlePaymentSuccess = (transactionId: string, paidAmount: number) => {
+  const handlePaymentSuccess = async (transactionId: string, paidAmount: number) => {
     if (!currentBillForPayment) return;
 
-    // Update the existing bill with payment information
-    const updatedBills = bills.map(bill => {
-      if (bill.id === currentBillForPayment.id) {
-        const newReceivedAmount = bill.received_amount + paidAmount;
-        const newPendingAmount = Math.max(0, bill.total_amount - newReceivedAmount);
-        const newStatus: 'pending' | 'completed' = newPendingAmount === 0 ? 'completed' : 'pending';
-        
-        return {
-          ...bill,
-          received_amount: newReceivedAmount,
-          pending_amount: newPendingAmount,
-          status: newStatus,
-          payment_mode: 'GPay',
-          transaction_id: transactionId,
-          payment_date: new Date().toISOString().split('T')[0]
-        };
-      }
-      return bill;
-    });
+    try {
+      // Update the bill via backend API
+      const newReceivedAmount = currentBillForPayment.received_amount + paidAmount;
+      const newPendingAmount = Math.max(0, currentBillForPayment.total_amount - newReceivedAmount);
 
-    // Update the bills in context
-    setBills(updatedBills);
-    
-    // Show success message
-    const statusMessage = paidAmount >= currentBillForPayment.total_amount ? 'Paid' : 'Partially Paid';
-    alert(`Payment of ₹${paidAmount} processed successfully via GPay!\nTransaction ID: ${transactionId}\nBill ${currentBillForPayment.id} updated to ${statusMessage} status.`);
+      await updateBill(currentBillForPayment.id, {
+        receivedAmount: newReceivedAmount,
+      });
 
-    // Reset states
-    setCurrentBill([]);
-    setReceivedAmount("0");
-    setPendingBills([]);
-    setShowPendingBillAlert(false);
-    setSelectedShop(null);
-    setShowBillingInterface(false);
-    setIsPayPendingMode(false);
-    setPendingPaymentAmount(0);
-    setCurrentBillForPayment(null);
+      // Show success message
+      const statusMessage = newPendingAmount === 0 ? 'Completed' : 'Partially Paid';
+      alert(`Payment of ₹${paidAmount} processed successfully via GPay!\nTransaction ID: ${transactionId}\nBill ${currentBillForPayment.id} updated to ${statusMessage} status.`);
+
+      // Reset states
+      setCurrentBill([]);
+      setReceivedAmount("0");
+      setPendingBills([]);
+      setShowPendingBillAlert(false);
+      setSelectedShop(null);
+      setShowBillingInterface(false);
+      setIsPayPendingMode(false);
+      setPendingPaymentAmount(0);
+      setCurrentBillForPayment(null);
+    } catch (error) {
+      console.error('Failed to update bill payment:', error);
+      alert('Failed to update bill payment. Please try again.');
+    }
   };
 
   // Helper function to get financial year from date
@@ -801,9 +809,9 @@ const Billing: React.FC = () => {
                       <div className="text-right">
                         <p className="font-semibold text-sm">₹{bill.pending_amount}</p>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          bill.status === 'completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
+      bill.status === 'COMPLETED' 
+        ? 'bg-green-100 text-green-800' 
+        : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {bill.status}
                         </span>
@@ -823,7 +831,7 @@ const Billing: React.FC = () => {
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
                       </button>
-                      {bill.status !== 'completed' && (
+                      {bill.status !== 'COMPLETED' && (
                         <button
                           onClick={() => {
                             setCurrentBillForPayment(bill);
@@ -1900,7 +1908,7 @@ const Billing: React.FC = () => {
 
                   <div className="flex justify-between py-1 font-bold">
                     <div>Status:</div>
-                    <div className={selectedBillForView.status === 'completed' ? "text-green-600" : "text-yellow-600"}>
+                    <div className={selectedBillForView.status === 'COMPLETED' ? "text-green-600" : "text-yellow-600"}>
                       {selectedBillForView.status.toUpperCase()}
                     </div>
                   </div>
@@ -2144,7 +2152,7 @@ const Billing: React.FC = () => {
                             <div class="dashed-line"></div>
                             <div class="total-row" style="font-weight: bold;">
                               <div>Status:</div>
-                              <div class="${selectedBillForView.status === 'completed' ? 'status-completed' : 'status-pending'}">
+                              <div class="${selectedBillForView.status === 'COMPLETED' ? 'status-completed' : 'status-pending'}">
                                 ${selectedBillForView.status.toUpperCase()}
                               </div>
                             </div>

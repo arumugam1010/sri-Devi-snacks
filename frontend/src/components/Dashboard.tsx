@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
   const todaysRevenue = bills
     .filter(bill => bill.bill_date === today)
     .reduce((sum, bill) => sum + bill.received_amount, 0);
-  const pendingBills = bills.filter(bill => bill.status === 'pending').length;
+  const pendingBills = bills.filter(bill => bill.status === 'PENDING').length;
   
   const [stats, setStats] = useState({
     totalShops: shops.filter(shop => shop.status === 'active').length,
@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
         .filter(bill => bill.bill_date === today)
         .reduce((sum, bill) => sum + bill.received_amount, 0),
       pendingReturns: 0,
-      activeOrders: bills.filter(bill => bill.status === 'pending').length
+      activeOrders: bills.filter(bill => bill.status === 'PENDING').length
     });
   }, [products, bills, shops]);
 

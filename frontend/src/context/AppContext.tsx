@@ -35,7 +35,7 @@ interface Bill {
   total_amount: number;
   received_amount: number;
   pending_amount: number;
-  status: 'pending' | 'completed';
+  status: 'PENDING' | 'COMPLETED';
   items: any[];
 }
 

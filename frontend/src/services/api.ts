@@ -104,7 +104,11 @@ export const billsAPI = {
     billDate?: string;
     receivedAmount?: number;
     notes?: string;
-    items: Array<{ productId: number; quantity: number; rate: number }>;
+    items: Array<{
+      productId: number;
+      quantity: number;
+      rate: number;
+    }>;
   }) => {
     return authenticatedFetch(`${API_BASE_URL}/bills`, {
       method: 'POST',
@@ -112,10 +116,10 @@ export const billsAPI = {
     });
   },
 
-  updateBill: async (id: number, billData: { receivedAmount?: number; notes?: string }) => {
+  updateBill: async (id: number, updateData: { receivedAmount?: number; notes?: string }) => {
     return authenticatedFetch(`${API_BASE_URL}/bills/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(billData),
+      body: JSON.stringify(updateData),
     });
   },
 
