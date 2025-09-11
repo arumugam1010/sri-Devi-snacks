@@ -164,12 +164,16 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
   let totalAmount = 0;
   const billItems = (billData.items || []).map(item => {
     const amount = Math.round((item.quantity * item.rate) * 100) / 100;
-    totalAmount += amount;
+    const sgst = item.sgst || 0;
+    const cgst = item.cgst || 0;
+    totalAmount += amount + sgst + cgst;
     return {
       productId: item.productId,
       quantity: item.quantity,
       rate: item.rate,
       amount,
+      sgst,
+      cgst,
     };
   });
 

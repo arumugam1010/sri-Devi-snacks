@@ -109,6 +109,8 @@ export const billsAPI = {
       productId: number;
       quantity: number;
       rate: number;
+      sgst?: number;
+      cgst?: number;
     }>;
   }) => {
     return authenticatedFetch(`${API_BASE_URL}/bills`, {

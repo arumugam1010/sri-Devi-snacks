@@ -404,7 +404,9 @@ const Billing: React.FC = () => {
       status: billStatus,
       items: currentBill.map(item => ({
         ...item,
-        rate: item.price
+        rate: item.price,
+        sgst: item.sgst || 0,
+        cgst: item.cgst || 0
       }))
     };
 
@@ -434,7 +436,9 @@ const Billing: React.FC = () => {
         shopId: paymentBillData.shopId,
         receivedAmount: paymentBillData.receivedAmount,
         applyToPending: paymentBillData.applyToPending,
-        items: [] // Empty items array for payment bill
+        items: [], // Empty items array for payment bill
+        sgst: 0,
+        cgst: 0
       };
 
       const response = await billsAPI.createBill(billData);
@@ -597,7 +601,11 @@ const Billing: React.FC = () => {
         received_amount: parseFloat(receivedAmount || "0"),
         pending_amount: pendingAmount,
         status: pendingAmount > 0 ? 'PENDING' : 'COMPLETED',
-        items: [...currentBill]
+        items: currentBill.map(item => ({
+          ...item,
+          sgst: item.sgst || 0,
+          cgst: item.cgst || 0
+        }))
       };
 
       // First save the bill to backend to get the actual ID

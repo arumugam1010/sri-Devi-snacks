@@ -124,6 +124,8 @@ model BillItem {
   quantity  Float
   rate      Float
   amount    Float
+  sgst      Float    @default(0)
+  cgst      Float    @default(0)
   createdAt DateTime @default(now())
 
   // Relations

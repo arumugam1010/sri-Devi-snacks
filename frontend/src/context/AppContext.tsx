@@ -211,6 +211,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             quantity: item.quantity,
             rate: item.rate,
             amount: item.amount,
+            sgst: item.sgst,
+            cgst: item.cgst,
           })),
         })));
       }
@@ -247,6 +249,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           productId: item.product_id,
           quantity: item.quantity,
           rate: item.rate,
+          sgst: item.sgst !== undefined ? item.sgst : 0,
+          cgst: item.cgst !== undefined ? item.cgst : 0,
         })),
       };
 

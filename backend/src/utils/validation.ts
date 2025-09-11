@@ -71,6 +71,8 @@ export const createBillSchema = z.object({
     productId: z.number().positive('Product ID must be positive'),
     quantity: z.number().positive('Quantity must be positive'),
     rate: z.number().positive('Rate must be positive'),
+    sgst: z.number().min(0, 'SGST cannot be negative').optional(),
+    cgst: z.number().min(0, 'CGST cannot be negative').optional(),
   })).optional().default([]),
 });
 
