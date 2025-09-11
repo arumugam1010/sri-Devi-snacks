@@ -104,6 +104,7 @@ export const billsAPI = {
     billDate?: string;
     receivedAmount?: number;
     notes?: string;
+    applyToPending?: boolean;
     items: Array<{
       productId: number;
       quantity: number;

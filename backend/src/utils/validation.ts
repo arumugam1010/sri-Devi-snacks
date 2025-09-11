@@ -66,11 +66,12 @@ export const createBillSchema = z.object({
   billDate: z.string().datetime().optional(),
   receivedAmount: z.number().min(0, 'Received amount cannot be negative').optional(),
   notes: z.string().optional(),
+  applyToPending: z.boolean().optional(),
   items: z.array(z.object({
     productId: z.number().positive('Product ID must be positive'),
     quantity: z.number().positive('Quantity must be positive'),
     rate: z.number().positive('Rate must be positive'),
-  })).min(1, 'At least one item is required'),
+  })).optional().default([]),
 });
 
 export const updateBillSchema = z.object({

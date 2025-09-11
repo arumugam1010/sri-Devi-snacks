@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, Trash2, Receipt, RotateCcw, Calculator, ShoppingCart, Eye, CreditCard } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { billsAPI } from '../services/api';
 import GPayQRCode from './GPayQRCode';
 
 interface BillItem {
@@ -97,6 +98,15 @@ const Billing: React.FC = () => {
 
   // State for selected bill for returns
   const [selectedBillForReturn, setSelectedBillForReturn] = useState<Bill | null>(null);
+
+  // State for payment bill mode
+  const [isPaymentBillMode, setIsPaymentBillMode] = useState(false);
+  const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
+  const [paymentBillData, setPaymentBillData] = useState<{
+    shopId: number;
+    receivedAmount: number;
+    applyToPending: boolean;
+  } | null>(null);
 
   const [productForm, setProductForm] = useState({
     product_id: '',
@@ -328,56 +338,27 @@ const Billing: React.FC = () => {
       return;
     }
 
-    // If no items in bill but there are pending bills and received amount > 0
-    if (currentBill.length === 0 && pendingBills.length > 0 && parseFloat(receivedAmount || "0") > 0) {
-      let remainingPayment = parseFloat(receivedAmount || "0");
-      const updatedBills = [...bills];
-      const updatedPendingBills = [...pendingBills];
-
-      // Apply payment to bills in order (oldest first)
-      for (let i = 0; i < updatedPendingBills.length && remainingPayment > 0; i++) {
-        const bill = updatedPendingBills[i];
-        const paymentAmount = Math.min(remainingPayment, bill.pending_amount);
-        const remainingAmount = bill.pending_amount - paymentAmount;
-        
-        // Update the bill in the main bills array
-        const billIndex = updatedBills.findIndex(b => b.id === bill.id);
-        if (billIndex !== -1) {
-          updatedBills[billIndex] = {
-            ...bill,
-            received_amount: bill.received_amount + paymentAmount,
-            pending_amount: remainingAmount,
-            status: remainingAmount === 0 ? 'COMPLETED' : 'PENDING'
-          };
-        }
-        
-        // Update the pending bill in our local state
-        updatedPendingBills[i] = {
-          ...bill,
-          received_amount: bill.received_amount + paymentAmount,
-          pending_amount: remainingAmount,
-          status: remainingAmount === 0 ? 'COMPLETED' : 'PENDING'
-        };
-        
-        remainingPayment -= paymentAmount;
+    // Handle payment bill mode (no items, only payment)
+    if (isPaymentBillMode) {
+      const paymentAmount = parseFloat(receivedAmount || "0");
+      if (paymentAmount <= 0) {
+        alert('Please enter a payment amount');
+        return;
       }
 
-      setBills(updatedBills);
-
-      // Update pending bills state, filtering out completed bills
-      const newPendingBills = updatedPendingBills.filter(bill => bill.pending_amount > 0);
-      setPendingBills(newPendingBills);
-
-    setReceivedAmount("0");
-      
-      const totalPaid = parseFloat(receivedAmount) - remainingPayment;
-      const remainingBalance = newPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
-      alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${remainingBalance}`);
+      // Show confirmation dialog for payment bills
+      setPaymentBillData({
+        shopId: selectedShop,
+        receivedAmount: paymentAmount,
+        applyToPending: true // Always apply to pending for payment bills
+      });
+      setShowPaymentConfirmation(true);
       return;
     }
 
+    // Handle normal bill with items
     if (currentBill.length === 0) {
-      alert('Please add items to the bill or enter a payment amount for pending balance');
+      alert('Please add items to the bill');
       return;
     }
 
@@ -385,16 +366,12 @@ const Billing: React.FC = () => {
     const returnAmount = currentBill
       .filter(item => item.quantity < 0)
       .reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0);
-    
+
     const billingAmount = currentBill
       .filter(item => item.quantity > 0)
       .reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0);
-    
-    let finalTotal = billingAmount + returnAmount; // returnAmount is negative
 
-    // Add total pending amount from all pending bills
-    const totalPendingAmount = pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
-    finalTotal += totalPendingAmount;
+    let finalTotal = billingAmount + returnAmount; // returnAmount is negative
 
     // Calculate pending amount including taxes
     const pendingAmount = Math.max(0, finalTotal - parseFloat(receivedAmount || "0"));
@@ -404,18 +381,18 @@ const Billing: React.FC = () => {
     const billDate = new Date();
     const billYear = billDate.getFullYear();
     const billMonth = billDate.getMonth() + 1;
-    
+
     // Determine financial year (April to March)
     const financialYear = billMonth >= 4 ? `${billYear}-${billYear + 1}` : `${billYear - 1}-${billYear}`;
-    
+
     // Count bills in the current financial year
     const billsInFinancialYear = bills.filter(bill => {
       const billFinancialYear = getFinancialYear(bill.bill_date);
       return billFinancialYear === financialYear;
     });
-    
+
     const nextBillNumber = billsInFinancialYear.length + 1;
-    
+
     const newBill: Bill = {
       id: `B${String(nextBillNumber).padStart(3, '0')}`,
       shop_id: selectedShop,
@@ -431,15 +408,6 @@ const Billing: React.FC = () => {
       }))
     };
 
-    // Mark all pending bills as completed since they're being paid through this bill
-    if (pendingBills.length > 0) {
-      for (const pendingBill of pendingBills) {
-        await updateBill(pendingBill.id, {
-          receivedAmount: pendingBill.received_amount + pendingBill.pending_amount,
-        });
-      }
-    }
-
     // Use the context's addBill method which automatically handles stock updates
     addBill(newBill);
     setCurrentBill([]);
@@ -454,6 +422,45 @@ const Billing: React.FC = () => {
     setPendingPaymentAmount(0);
     setHasPrinted(false); // Reset print status when bill is saved
     alert(`Bill ${newBill.id} saved successfully!\nFinal Amount: ₹${finalTotal}\nStatus: ${billStatus}\nStock updated for sold items.`);
+  };
+
+  // Handle payment bill confirmation
+  const handlePaymentBillConfirm = async () => {
+    if (!paymentBillData) return;
+
+    try {
+      // Create payment bill with applyToPending flag
+      const billData = {
+        shopId: paymentBillData.shopId,
+        receivedAmount: paymentBillData.receivedAmount,
+        applyToPending: paymentBillData.applyToPending,
+        items: [] // Empty items array for payment bill
+      };
+
+      const response = await billsAPI.createBill(billData);
+
+      if (response.success) {
+        // Refresh bills list to see updated statuses
+        // Instead of loadBills, refresh bills from context or refetch as needed
+        alert(`Payment of ₹${paymentBillData.receivedAmount} applied successfully to pending bills!`);
+      } else {
+        alert('Failed to process payment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Payment bill creation error:', error);
+      alert('Failed to process payment. Please try again.');
+    } finally {
+      setShowPaymentConfirmation(false);
+      setPaymentBillData(null);
+      setReceivedAmount("0");
+      setIsPaymentBillMode(false);
+    }
+  };
+
+  // Handle payment bill cancellation
+  const handlePaymentBillCancel = () => {
+    setShowPaymentConfirmation(false);
+    setPaymentBillData(null);
   };
 
   const handleShowReturns = () => {
@@ -696,18 +703,33 @@ const Billing: React.FC = () => {
 
       {/* Create Bill Button */}
       {!showBillingInterface && (
+        <div className="flex space-x-3">
           <button
             onClick={() => {
               setShowBillingInterface(true);
               setIsPayPendingMode(false);
               setPendingPaymentAmount(0);
+              setIsPaymentBillMode(false);
             }}
             className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
           >
             <Receipt className="h-5 w-5 mr-2" />
             Create Bill
           </button>
-       
+
+          <button
+            onClick={() => {
+              setShowBillingInterface(true);
+              setIsPayPendingMode(false);
+              setPendingPaymentAmount(0);
+              setIsPaymentBillMode(true);
+            }}
+            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition"
+          >
+            <CreditCard className="h-5 w-5 mr-2" />
+            Payment Only
+          </button>
+        </div>
       )}
           <button
             onClick={handleShowReturns}
@@ -720,11 +742,15 @@ const Billing: React.FC = () => {
           { /* Remove Pay with GPay button here as per feedback */ }
           <button
             onClick={handleSaveBill}
-            disabled={(currentBill.length > 0 && !hasPrinted) || (currentBill.length === 0 && (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0))}
+            disabled={
+              isPaymentBillMode
+                ? (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0)
+                : ((currentBill.length > 0 && !hasPrinted) || (currentBill.length === 0 && (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0)))
+            }
             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition"
           >
-            <Receipt className="h-5 w-5 mr-2" />
-            Save Bill
+            <CreditCard className="h-5 w-5 mr-2" />
+            {isPaymentBillMode ? 'Process Payment' : 'Save Bill'}
           </button>
           
           
@@ -988,9 +1014,14 @@ const Billing: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Select Day & Shop</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {isPaymentBillMode ? 'Payment Bill Setup' : 'Select Day & Shop'}
+                </h3>
                 <button
-                  onClick={() => setShowBillingInterface(false)}
+                  onClick={() => {
+                    setShowBillingInterface(false);
+                    setIsPaymentBillMode(false);
+                  }}
                   className="text-sm text-gray-500 hover:text-gray-700"
                 >
                   Back to Bills
@@ -1050,45 +1081,98 @@ const Billing: React.FC = () => {
                 )}
 
                 {selectedShop && (
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-900">Selected Shop</h4>
-                    <p className="text-blue-700">{currentShop?.shop_name}</p>
-                    
-                    {pendingBills.length > 0 && !isPayPendingMode && (
-                      <div className="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
-                        <p className="text-yellow-800 text-sm font-medium">
-                          Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
-                        </p>
-                        <p className="text-yellow-700 text-xs">
-                          {pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''} (oldest: {pendingBills[0].id})
-                        </p>
-                      </div>
-                    )}
+                  <div className={`p-4 rounded-lg ${isPaymentBillMode ? 'bg-green-50' : 'bg-blue-50'}`}>
+                    <h4 className={`font-medium ${isPaymentBillMode ? 'text-green-900' : 'text-blue-900'}`}>
+                      {isPaymentBillMode ? 'Payment Setup' : 'Selected Shop'}
+                    </h4>
+                    <p className={`${isPaymentBillMode ? 'text-green-700' : 'text-blue-700'}`}>
+                      {currentShop?.shop_name}
+                    </p>
 
-                    {!isPayPendingMode && (
+                    {isPaymentBillMode ? (
                       <>
-                        <p className="text-blue-600 text-sm mt-2">Total Items: {currentBill.length}</p>
-                        <p className="text-blue-600 text-sm">Total Amount: ₹{
-                          currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
-                          pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)
-                        }</p>
+                        {pendingBills.length > 0 ? (
+                          <div className="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                            <p className="text-yellow-800 text-sm font-medium">
+                              Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                            </p>
+                            <p className="text-yellow-700 text-xs">
+                              {pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''} (oldest: {pendingBills[0].id})
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="mt-3 p-3 bg-gray-100 border border-gray-300 rounded-lg">
+                            <p className="text-gray-800 text-sm font-medium">
+                              No Pending Bills
+                            </p>
+                            <p className="text-gray-700 text-xs">
+                              This shop has no outstanding balances to pay.
+                            </p>
+                          </div>
+                        )}
 
-                        {/* Received Amount Input */}
+                        {/* Payment Amount Input */}
                         <div className="mt-4">
                           <label htmlFor="receivedAmount" className="block text-sm font-medium text-gray-700 mb-1">
-                            Received Amount
+                            Payment Amount
                           </label>
                           <input
                             type="number"
                             id="receivedAmount"
                             min="0"
-                            max={totalAmount + pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                            max={pendingBills.length > 0 ? pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0) : undefined}
                             value={receivedAmount}
                             placeholder="0"
                             onChange={(e) => setReceivedAmount(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            disabled={pendingBills.length === 0}
                           />
+                          {pendingBills.length === 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              No pending bills to pay
+                            </p>
+                          )}
                         </div>
+                      </>
+                    ) : (
+                      <>
+                        {pendingBills.length > 0 && !isPayPendingMode && (
+                          <div className="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                            <p className="text-yellow-800 text-sm font-medium">
+                              Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                            </p>
+                            <p className="text-yellow-700 text-xs">
+                              {pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''} (oldest: {pendingBills[0].id})
+                            </p>
+                          </div>
+                        )}
+
+                        {!isPayPendingMode && (
+                          <>
+                            <p className="text-blue-600 text-sm mt-2">Total Items: {currentBill.length}</p>
+                            <p className="text-blue-600 text-sm">Total Amount: ₹{
+                              currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
+                              pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)
+                            }</p>
+
+                            {/* Received Amount Input */}
+                            <div className="mt-4">
+                              <label htmlFor="receivedAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                                Received Amount
+                              </label>
+                              <input
+                                type="number"
+                                id="receivedAmount"
+                                min="0"
+                                max={totalAmount + pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                                value={receivedAmount}
+                                placeholder="0"
+                                onChange={(e) => setReceivedAmount(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
 
@@ -1150,8 +1234,8 @@ const Billing: React.FC = () => {
               </div>
             </div>
 
-            {/* Add Product Form */}
-            {selectedShop && !isPayPendingMode && (
+            {/* Add Product Form - Only show in normal bill mode */}
+            {selectedShop && !isPayPendingMode && !isPaymentBillMode && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Product</h3>
                 <form onSubmit={handleAddProduct} className="space-y-4">
@@ -1199,13 +1283,13 @@ const Billing: React.FC = () => {
             )}
           </div>
 
-              {/* Current Bill */}
+              {/* Current Bill / Payment Bill */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {isPayPendingMode ? 'Pending Payment' : 'Current Bill'}
+                    {isPaymentBillMode ? 'Payment Bill' : isPayPendingMode ? 'Pending Payment' : 'Current Bill'}
                   </h3>
                   {currentBill.length > 0 && !isPayPendingMode && (
                     <div className="flex space-x-3">
@@ -1450,13 +1534,55 @@ const Billing: React.FC = () => {
                 </div>
               </div>
               
-              {isPayPendingMode ? (
+              {isPaymentBillMode ? (
+                <div className="p-12 text-center">
+                  <CreditCard className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Payment Bill</h3>
+                  <p className="text-gray-500 mb-6">
+                    {pendingBills.length > 0 ?
+                      `Apply payment to ${pendingBills.length} pending bill${pendingBills.length > 1 ? 's' : ''} (₹${pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)})` :
+                      'No pending bills available for payment'
+                    }
+                  </p>
+
+                  {pendingBills.length > 0 && (
+                    <div className="max-w-md mx-auto">
+                      <div className="bg-green-50 p-4 rounded-lg mb-4">
+                        <h4 className="font-medium text-green-800 mb-2">Payment Details</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-green-700">Total Pending:</span>
+                            <span className="font-semibold text-green-800">₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-green-700">Payment Amount:</span>
+                            <span className="font-semibold text-green-800">₹{parseFloat(receivedAmount || "0")}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-green-700">Remaining:</span>
+                            <span className="font-semibold text-green-800">
+                              ₹{Math.max(0, pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0) - parseFloat(receivedAmount || "0"))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-yellow-800 mb-2">Payment Instructions</h4>
+                        <p className="text-sm text-yellow-700">
+                          This will create a payment bill and automatically apply the payment to outstanding bills in order (oldest first).
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : isPayPendingMode ? (
                 <div className="p-12 text-center">
                   <Receipt className="h-12 w-12 text-orange-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-1">Paying Pending Balance</h3>
                   <p className="text-gray-500">
-                    {pendingBills.length > 0 ? 
-                      `Processing payment for ${pendingBills.length} pending bill${pendingBills.length > 1 ? 's' : ''} (₹${pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)})` : 
+                    {pendingBills.length > 0 ?
+                      `Processing payment for ${pendingBills.length} pending bill${pendingBills.length > 1 ? 's' : ''} (₹${pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)})` :
                       'No pending bills selected'
                     }
                   </p>
@@ -2230,6 +2356,74 @@ const Billing: React.FC = () => {
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
                 >
                   Print Bill
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Confirmation Dialog */}
+      {showPaymentConfirmation && paymentBillData && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-md shadow-lg rounded-lg bg-white">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Confirm Payment</h3>
+                <button
+                  onClick={handlePaymentBillCancel}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <span className="sr-only">Close</span>
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-yellow-800">Payment Confirmation</h4>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        This will create a payment bill and apply the amount to outstanding pending bills for {currentShop?.shop_name}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Shop:</span>
+                    <span className="text-sm text-gray-900">{currentShop?.shop_name}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Payment Amount:</span>
+                    <span className="text-sm font-semibold text-green-600">₹{paymentBillData.receivedAmount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Apply to Pending:</span>
+                    <span className="text-sm text-blue-600">{paymentBillData.applyToPending ? 'Yes' : 'No'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={handlePaymentBillCancel}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePaymentBillConfirm}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
+                >
+                  Confirm Payment
                 </button>
               </div>
             </div>

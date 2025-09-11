@@ -160,43 +160,83 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
     // Generate unique bill number
     const billNumber = await generateBillNumber();
 
-    // Calculate totals
-    let totalAmount = 0;
-    const billItems = billData.items.map(item => {
-      const amount = item.quantity * item.rate;
-      totalAmount += amount;
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        rate: item.rate,
-        amount,
-      };
+  // Calculate totals
+  let totalAmount = 0;
+  const billItems = (billData.items || []).map(item => {
+    const amount = item.quantity * item.rate;
+    totalAmount += amount;
+    return {
+      productId: item.productId,
+      quantity: item.quantity,
+      rate: item.rate,
+      amount,
+    };
+  });
+
+  const receivedAmount = billData.receivedAmount || 0;
+  const pendingAmount = totalAmount - receivedAmount;
+  const isPaymentBill = (billData.items || []).length === 0 && receivedAmount > 0;
+  const shouldApplyToPending = isPaymentBill && billData.applyToPending === true;
+
+  // Create bill with items in a transaction
+  const bill = await prisma.$transaction(async (tx) => {
+    // Create the bill
+    const newBill = await tx.bill.create({
+      data: {
+        billNumber,
+        shopId: billData.shopId,
+        userId,
+        billDate: billData.billDate ? new Date(billData.billDate) : new Date(),
+        totalAmount,
+        receivedAmount,
+        pendingAmount,
+        status: pendingAmount <= 0 ? 'COMPLETED' : 'PENDING',
+        notes: billData.notes,
+      },
     });
 
-    const receivedAmount = billData.receivedAmount || 0;
-    const pendingAmount = totalAmount - receivedAmount;
-    const status = pendingAmount <= 0 ? 'COMPLETED' : 'PENDING';
+    console.log(`Bill created with ID: ${newBill.id} and Bill Number: ${billNumber}`);
 
-    // Create bill with items in a transaction
-    const bill = await prisma.$transaction(async (tx) => {
-      // Create the bill
-      const newBill = await tx.bill.create({
-        data: {
-          billNumber,
+    if (shouldApplyToPending) {
+      console.log(`Applying payment of ₹${receivedAmount} to pending bills for shop ${billData.shopId}`);
+
+      const pendingBills = await tx.bill.findMany({
+        where: {
           shopId: billData.shopId,
-          userId,
-          billDate: billData.billDate ? new Date(billData.billDate) : new Date(),
-          totalAmount,
-          receivedAmount,
-          pendingAmount,
-          status: status as any,
-          notes: billData.notes,
+          status: 'PENDING',
+        },
+        orderBy: {
+          billDate: 'asc',
         },
       });
 
-      console.log(`Bill created with ID: ${newBill.id} and Bill Number: ${billNumber}`);
+      let remainingPayment = receivedAmount;
 
-      // Create bill items
+      for (const pendingBill of pendingBills) {
+        if (remainingPayment <= 0) break;
+
+        const paymentAmount = Math.min(remainingPayment, pendingBill.pendingAmount);
+        const newReceivedAmount = pendingBill.receivedAmount + paymentAmount;
+        const newPendingAmount = pendingBill.pendingAmount - paymentAmount;
+        const newStatus = newPendingAmount <= 0 ? 'COMPLETED' : 'PENDING';
+
+        await tx.bill.update({
+          where: { id: pendingBill.id },
+          data: {
+            receivedAmount: newReceivedAmount,
+            pendingAmount: newPendingAmount,
+            status: newStatus as any,
+          },
+        });
+
+        console.log(`Applied ₹${paymentAmount} to bill ${pendingBill.id}, new status: ${newStatus}`);
+        remainingPayment -= paymentAmount;
+      }
+
+      console.log(`Payment application completed. Remaining payment: ₹${remainingPayment}`);
+    } else if (isPaymentBill && !shouldApplyToPending) {
+      console.log(`Payment bill created but payment not applied to pending bills (applyToPending=false)`);
+    } else {
       await tx.billItem.createMany({
         data: billItems.map(item => ({
           billId: newBill.id,
@@ -204,9 +244,8 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
         })),
       });
 
-      // Update stock quantities (only for positive quantities, not returns)
-      for (const item of billData.items) {
-        if (item.quantity > 0) { // Only reduce stock for sales, not returns
+      for (const item of (billData.items || [])) {
+        if (item.quantity > 0) {
           const stock = await tx.stock.findUnique({
             where: { productId: item.productId },
           });
@@ -221,9 +260,10 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
           }
         }
       }
+    }
 
-      return newBill;
-    });
+    return newBill;
+  });
 
     // Fetch the complete bill with relations
     const completeBill = await prisma.bill.findUnique({
