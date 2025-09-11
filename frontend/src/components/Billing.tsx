@@ -725,7 +725,7 @@ const Billing: React.FC = () => {
             Create Bill
           </button>
 
-          <button
+          {/* <button
             onClick={() => {
               setShowBillingInterface(true);
               setIsPayPendingMode(false);
@@ -736,7 +736,7 @@ const Billing: React.FC = () => {
           >
             <CreditCard className="h-5 w-5 mr-2" />
             Payment Only
-          </button>
+          </button> */}
         </div>
       )}
           <button
