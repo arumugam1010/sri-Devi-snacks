@@ -84,7 +84,7 @@ const Billing: React.FC = () => {
   const convertStatusToBackend = (status: 'pending' | 'completed'): 'PENDING' | 'COMPLETED' => {
     return status.toUpperCase() as 'PENDING' | 'COMPLETED';
   };
-  const [returnQuantities, setReturnQuantities] = useState<{[key: number]: number}>({});
+  const [returnQuantities, setReturnQuantities] = useState<{[key: number]: string}>({});
   const [selectedBillForView, setSelectedBillForView] = useState<Bill | null>(null);
   const [showBillingInterface, setShowBillingInterface] = useState(false);
   const [receivedAmount, setReceivedAmount] = useState<string>("");
@@ -496,17 +496,17 @@ const Billing: React.FC = () => {
       return;
     }
 
-    // Initialize return quantities for all products
-    const initialReturnQuantities: {[key: number]: number} = {};
+    // Initialize return quantities for all products as empty string for empty input
+    const initialReturnQuantities: {[key: number]: string} = {};
     products.forEach(product => {
-      initialReturnQuantities[product.id] = 0;
+      initialReturnQuantities[product.id] = '';
     });
 
     setReturnQuantities(initialReturnQuantities);
     setShowReturnModal(true);
   };
 
-  const handleReturnQuantityChange = (productId: number, returnQuantity: number) => {
+  const handleReturnQuantityChange = (productId: number, returnQuantity: string) => {
     setReturnQuantities({
       ...returnQuantities,
       [productId]: returnQuantity
@@ -514,14 +514,26 @@ const Billing: React.FC = () => {
   };
 
   const handleProcessReturns = () => {
+    // Validate no negative quantities
+    for (const [productId, quantityStr] of Object.entries(returnQuantities)) {
+      const quantity = parseInt(quantityStr);
+      if (!isNaN(quantity) && quantity < 0) {
+        alert('Return quantity cannot be less than 0');
+        return;
+      }
+    }
+
     // Get products with return quantities greater than 0
     const productsToReturn = Object.entries(returnQuantities)
-      .filter(([_, quantity]) => quantity > 0)
-      .map(([productId, quantity]) => {
+      .filter(([_, quantityStr]) => {
+        const quantity = parseInt(quantityStr);
+        return !isNaN(quantity) && quantity > 0;
+      })
+      .map(([productId, quantityStr]) => {
         const product = allProductsForShop.find(p => p.product_id === parseInt(productId));
         return {
           product,
-          quantity: quantity as number
+          quantity: parseInt(quantityStr)
         };
       });
     
@@ -1843,8 +1855,9 @@ const Billing: React.FC = () => {
                     sp.shop_id === selectedShop && sp.product_id === product.id
                   );
                   const price = shopPricing ? shopPricing.price : product.price;
-                  const returnQuantity = returnQuantities[product.id] || 0;
-                  const returnAmount = returnQuantity * price;
+                  const returnQuantity = returnQuantities[product.id] || '';
+                  const returnQuantityNumber = parseInt(returnQuantity) || 0;
+                  const returnAmount = returnQuantityNumber * price;
 
                   return (
                     <div key={`return-input-${product.id}`} className="grid grid-cols-4 gap-4 py-2 items-center">
@@ -1853,8 +1866,9 @@ const Billing: React.FC = () => {
                         <input
                           type="number"
                           min="0"
+                          placeholder="0"
                           value={returnQuantity}
-                          onChange={(e) => handleReturnQuantityChange(product.id, parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleReturnQuantityChange(product.id, e.target.value)}
                           className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-right"
                         />
                       </div>
@@ -1877,7 +1891,7 @@ const Billing: React.FC = () => {
                         sp.shop_id === selectedShop && sp.product_id === product.id
                       );
                       const price = shopPricing ? shopPricing.price : product.price;
-                      const returnQuantity = returnQuantities[product.id] || 0;
+                      const returnQuantity = parseInt(returnQuantities[product.id] || '0') || 0;
                       return sum + (returnQuantity * price);
                     }, 0)
                   }</div>
@@ -1893,7 +1907,7 @@ const Billing: React.FC = () => {
                         sp.shop_id === selectedShop && sp.product_id === product.id
                       );
                       const price = shopPricing ? shopPricing.price : product.price;
-                      const returnQuantity = returnQuantities[product.id] || 0;
+                      const returnQuantity = parseInt(returnQuantities[product.id] || '0') || 0;
                       return sum + (returnQuantity * price);
                     }, 0)
                   }</div>
