@@ -17,7 +17,7 @@ export const registerSchema = z.object({
 // Shop validation schemas
 export const createShopSchema = z.object({
   shopName: z.string().min(2, 'Shop name must be at least 2 characters'),
-  address: z.string().min(10, 'Address must be at least 10 characters'),
+  address: z.string(),
   contact: z.string().min(10, 'Contact must be at least 10 characters'),
   email: z.string().email().optional().or(z.literal('')),
   gstNumber: z.string().optional(),
