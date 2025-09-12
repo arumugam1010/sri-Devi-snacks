@@ -293,9 +293,6 @@ const Stock: React.FC = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{product.product_name}</div>
-                          <div className="text-sm text-gray-500">
-                            {product.status === 'active' ? 'Active' : 'Inactive'}
-                          </div>
                         </div>
                       </div>
                     </td>
