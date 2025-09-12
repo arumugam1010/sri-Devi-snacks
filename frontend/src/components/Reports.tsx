@@ -94,30 +94,18 @@ const Reports: React.FC = () => {
   
   // Generate reports from actual data
   const dailyBillingSummary = useMemo(() => {
-    const billsByDate = bills.reduce((acc, bill) => {
-      const date = bill.bill_date;
-      if (!acc[date]) {
-        acc[date] = { date, bills: 0, revenue: 0, received: 0, pending: 0, shops: new Set() };
-      }
-      acc[date].bills += 1;
-      acc[date].revenue += bill.total_amount;
-      acc[date].received += bill.received_amount;
-      acc[date].pending += bill.pending_amount;
-      acc[date].shops.add(bill.shop_id);
-      return acc;
-    }, {} as Record<string, { date: string; bills: number; revenue: number; received: number; pending: number; shops: Set<number> }>);
-
-    return Object.values(billsByDate)
-      .map(item => ({
-        date: item.date,
-        bills: item.bills,
-        revenue: item.revenue,
-        received: item.received,
-        pending: item.pending,
-        shops: item.shops.size
+    return bills
+      .map(bill => ({
+        date: bill.bill_date,
+        billNumber: bill.id,
+        shopName: bill.shop_name,
+        totalAmount: bill.total_amount,
+        receivedAmount: bill.received_amount,
+        pendingAmount: bill.pending_amount,
+        status: bill.status
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 10); // Show last 10 days
+      .slice(0, 50); // Show last 50 bills
   }, [bills]);
 
   const shopWiseReport = useMemo(() => {
@@ -386,48 +374,54 @@ const Reports: React.FC = () => {
                       Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Bills
+                      Bill Number
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Revenue
+                      Shop
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Received
+                      Total Amount
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Pending
+                      Received
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Shops Served
+                      Pending
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Avg per Bill
+                      Status
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {dailyBillingSummary.map((day) => (
-                    <tr key={day.date} className="hover:bg-gray-50">
+                  {dailyBillingSummary.map((bill) => (
+                    <tr key={bill.billNumber} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {new Date(day.date).toLocaleDateString()}
+                        {new Date(bill.date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {day.bills}
+                        {bill.billNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {bill.shopName}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{day.revenue.toLocaleString()}
+                        ₹{bill.totalAmount.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                        ₹{day.received.toLocaleString()}
+                        ₹{bill.receivedAmount.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
-                        ₹{day.pending.toLocaleString()}
+                        ₹{bill.pendingAmount.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {day.shops}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{Math.round(day.revenue / day.bills).toLocaleString()}
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          bill.status === 'COMPLETED'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {bill.status}
+                        </span>
                       </td>
                     </tr>
                   ))}
