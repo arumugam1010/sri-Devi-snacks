@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
       totalProducts: products.length,
       todaysBills: dashboardStats?.bills?.today || 0,
       todaysRevenue: dashboardStats?.revenue?.today || 0,
-      pendingReturns: 0,
+      pendingReturns: dashboardStats?.bills?.pending || 0,
       activeOrders: bills.filter(bill => bill.status === 'PENDING').length
     });
   }, [products, bills, shops, dashboardStats]);
