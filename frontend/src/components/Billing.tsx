@@ -241,11 +241,15 @@ const Billing: React.FC = () => {
       const updatedBill = [...currentBill];
       updatedBill[existingItemIndex].quantity += quantity;
       updatedBill[existingItemIndex].amount = updatedBill[existingItemIndex].quantity * updatedBill[existingItemIndex].price;
-      // Recalculate SGST and CGST
-      if (product.gst) {
+      // Recalculate SGST and CGST only for positive quantity items (sales)
+      if (product.gst && updatedBill[existingItemIndex].quantity > 0) {
         const gstAmount = (updatedBill[existingItemIndex].amount * product.gst) / 100;
         updatedBill[existingItemIndex].sgst = gstAmount / 2;
         updatedBill[existingItemIndex].cgst = gstAmount / 2;
+      } else {
+        // For return items, set SGST and CGST to 0
+        updatedBill[existingItemIndex].sgst = 0;
+        updatedBill[existingItemIndex].cgst = 0;
       }
       setCurrentBill(updatedBill);
     } else {
@@ -262,11 +266,15 @@ const Billing: React.FC = () => {
         hsn_code: product.hsn_code
       };
 
-      // Calculate SGST and CGST
-      if (product.gst) {
+      // Calculate SGST and CGST only for positive quantity items (sales)
+      if (product.gst && quantity > 0) {
         const gstAmount = (amount * product.gst) / 100;
         newItem.sgst = gstAmount / 2;
         newItem.cgst = gstAmount / 2;
+      } else {
+        // For return items, set SGST and CGST to 0
+        newItem.sgst = 0;
+        newItem.cgst = 0;
       }
 
       setCurrentBill([...currentBill, newItem]);
@@ -419,20 +427,26 @@ const Billing: React.FC = () => {
       }))
     };
 
-    // Use the context's addBill method which automatically handles stock updates
-    addBill(newBill);
-    setCurrentBill([]);
-    setReturnItems([]);
-    setReceivedAmount("0");
-    setPendingBills([]);
-    setShowPendingBillAlert(false);
-    setSelectedShop(null);
-    setReturnQuantities({});
-    setShowBillingInterface(false);
-    setIsPayPendingMode(false);
-    setPendingPaymentAmount(0);
-    setHasPrinted(false); // Reset print status when bill is saved
-    alert(`Bill ${newBill.id} saved successfully!\nFinal Amount: ₹${finalTotal}\nStatus: ${billStatus}\nStock updated for sold items.`);
+    try {
+      // Use the context's addBill method which automatically handles stock updates
+      await addBill(newBill);
+      setCurrentBill([]);
+      setReturnItems([]);
+      setReceivedAmount("0");
+      setPendingBills([]);
+      setShowPendingBillAlert(false);
+      setSelectedShop(null);
+      setReturnQuantities({});
+      setShowBillingInterface(false);
+      setIsPayPendingMode(false);
+      setPendingPaymentAmount(0);
+      setHasPrinted(false); // Reset print status when bill is saved
+      alert(`Bill ${newBill.id} saved successfully!\nFinal Amount: ₹${finalTotal}\nStatus: ${billStatus}\nStock updated for sold items.`);
+    } catch (error: any) {
+      console.error('Failed to save bill:', error);
+      alert(`Failed to save bill: ${error.message || 'Unknown error occurred'}`);
+      // Don't reset the form on error so user can try again
+    }
   };
 
   // Handle payment bill confirmation
@@ -457,7 +471,7 @@ const Billing: React.FC = () => {
         // Instead of loadBills, refresh bills from context or refetch as needed
         alert(`Payment of ₹${paymentBillData.receivedAmount} applied successfully to pending bills!`);
       } else {
-        alert('Failed to process payment. Please try again.');
+        throw new Error(response.message || 'Failed to process payment');
       }
     } catch (error) {
       console.error('Payment bill creation error:', error);
@@ -538,12 +552,9 @@ const Billing: React.FC = () => {
           amount: newAmount
         };
         
-        // Calculate SGST and CGST for return item
-        if (product.gst) {
-          const gstAmount = (Math.abs(newAmount) * product.gst) / 100;
-          updatedBill[existingReturnItemIndex].sgst = -(gstAmount / 2);
-          updatedBill[existingReturnItemIndex].cgst = -(gstAmount / 2);
-        }
+        // For return items, set SGST and CGST to 0 (no tax for returns)
+        updatedBill[existingReturnItemIndex].sgst = 0;
+        updatedBill[existingReturnItemIndex].cgst = 0;
       } else {
         // Add return item with negative values
         const amount = -quantity * product.price; // Negative amount for return items
@@ -558,12 +569,9 @@ const Billing: React.FC = () => {
           hsn_code: product.hsn_code
         };
         
-        // Calculate SGST and CGST for return item
-        if (product.gst) {
-          const gstAmount = (Math.abs(amount) * product.gst) / 100;
-          returnItem.sgst = -(gstAmount / 2);
-          returnItem.cgst = -(gstAmount / 2);
-        }
+        // For return items, set SGST and CGST to 0 (no tax for returns)
+        returnItem.sgst = 0;
+        returnItem.cgst = 0;
         
         updatedBill.push(returnItem);
       }

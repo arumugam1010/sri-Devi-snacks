@@ -69,8 +69,8 @@ export const createBillSchema = z.object({
   applyToPending: z.boolean().optional(),
   items: z.array(z.object({
     productId: z.number().positive('Product ID must be positive'),
-    quantity: z.number().positive('Quantity must be positive'),
-    rate: z.number().positive('Rate must be positive'),
+    quantity: z.number().min(-999999, 'Quantity cannot be too negative').max(999999, 'Quantity cannot be too large'),
+    rate: z.number().min(0, 'Rate cannot be negative'),
     sgst: z.number().min(0, 'SGST cannot be negative').optional(),
     cgst: z.number().min(0, 'CGST cannot be negative').optional(),
   })).optional().default([]),

@@ -250,6 +250,7 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
 
       for (const item of (billData.items || [])) {
         if (item.quantity > 0) {
+          // Only reduce stock for positive quantity items (sales)
           const stock = await tx.stock.findUnique({
             where: { productId: item.productId },
           });
@@ -263,6 +264,7 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
             });
           }
         }
+        // Note: Negative quantity items (returns) are treated as wastage and do not affect stock
       }
     }
 

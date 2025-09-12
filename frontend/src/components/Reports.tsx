@@ -264,6 +264,7 @@ const Reports: React.FC = () => {
           acc[item.product_id].revenue += item.amount + (item.sgst || 0) + (item.cgst || 0);
         } else {
           acc[item.product_id].returns += Math.abs(item.quantity);
+          // For returns, revenue is already negative in item.amount, no need to add taxes
         }
         acc[item.product_id].shops.add(bill.shop_id);
       });
