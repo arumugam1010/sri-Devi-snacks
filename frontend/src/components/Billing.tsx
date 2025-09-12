@@ -3,6 +3,7 @@ import { Search, Plus, Trash2, Receipt, RotateCcw, Calculator, ShoppingCart, Eye
 import { useAppContext } from '../context/AppContext';
 import { billsAPI } from '../services/api';
 import GPayQRCode from './GPayQRCode';
+import Logo from '../assets/Logo.png';
 
 interface BillItem {
   id: number;
@@ -1425,6 +1426,11 @@ const Billing: React.FC = () => {
                                         <div>GST No: 33BAPPS2831B2ZU</div>
                                         <div>Mobile: 8807810021</div>
                                       </div>
+
+                                      <div style="text-align:center; margin-bottom:5px;">
+                                        <img src="${Logo}" alt="Sri Devi Snacks Logo" style="width: 100px; height: auto; margin: 0 auto;" />
+                                      </div>
+
                                       <div class="company-name">Sri Devi Snacks</div>
                                       <div class="company-address">128 C Santhanamari Amman Kovil Street</div>
                                       <div class="company-city">Vallioor, Tirunelveli-627117</div>
@@ -1631,6 +1637,11 @@ const Billing: React.FC = () => {
                       <div className="text-right">
                         <p className="text-sm font-medium">Mobile: 8807810021</p>
                       </div>
+                    </div>
+
+                    {/* Logo */}
+                    <div className="text-center mb-1">
+                      <img src={Logo} alt="Sri Devi Snacks Logo" className="mx-auto" style={{width: '100px', height: 'auto'}} />
                     </div>
 
                     {/* Company Name */}
@@ -1934,6 +1945,11 @@ const Billing: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Logo */}
+                  <div className="text-center mb-1">
+                    <img src={Logo} alt="Sri Devi Snacks Logo" className="mx-auto" style={{width: '100px', height: 'auto'}} />
+                  </div>
+
                   {/* Company Name */}
                   <div className="text-center mb-2">
                     <h1 className="text-2xl font-bold text-gray-900">Sri Devi Snacks</h1>
@@ -2226,7 +2242,7 @@ const Billing: React.FC = () => {
                             </style>
                           </head>
                           <body>
-                           <div class="bill-header" style="text-align:center; margin-bottom:5px;">
+                                <div class="bill-header" style="text-align:center; margin-bottom:5px;">
   <div style="font-size:10px; font-weight:bold;">
     "ஸ்ரீ தேவி சந்தான மாரியம்மன் துணை"
   </div>
@@ -2236,6 +2252,11 @@ const Billing: React.FC = () => {
                                 <div>GST No: 33BAPPS2831B2ZU</div>
                                 <div>Mobile: 8807810021</div>
                               </div>
+
+                              <div style="text-align:center; margin-bottom:5px;">
+                                <img src="${Logo}" alt="Sri Devi Snacks Logo" style="width: 100px; height: auto; margin: 0 auto;" />
+                              </div>
+
                               <div class="company-name">Sri Devi Snacks</div>
                               <div class="company-address">128 C Santhanamari Amman Kovil Street</div>
                               <div class="company-city">Vallioor, Tirunelveli-627117</div>
