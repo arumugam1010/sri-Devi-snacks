@@ -178,9 +178,19 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
   });
 
   const receivedAmount = Math.round((billData.receivedAmount || 0) * 100) / 100;
-  const pendingAmount = Math.round((totalAmount - receivedAmount) * 100) / 100;
   const isPaymentBill = (billData.items || []).length === 0 && receivedAmount > 0;
   const shouldApplyToPending = isPaymentBill && billData.applyToPending === true;
+
+  // Adjust for excess payment on regular bills
+  let billReceivedAmount = receivedAmount;
+  let excessPayment = 0;
+  if (receivedAmount > totalAmount && !isPaymentBill) {
+    excessPayment = Math.round((receivedAmount - totalAmount) * 100) / 100;
+    billReceivedAmount = totalAmount;
+  }
+
+  const pendingAmount = Math.round((totalAmount - billReceivedAmount) * 100) / 100;
+  const status = pendingAmount <= 0 ? 'COMPLETED' : 'PENDING';
 
   // Create bill with items in a transaction
   const bill = await prisma.$transaction(async (tx) => {
@@ -192,15 +202,45 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
         userId,
         billDate: billData.billDate ? new Date(billData.billDate) : new Date(),
         totalAmount,
-        receivedAmount,
+        receivedAmount: billReceivedAmount,
         pendingAmount,
-        status: pendingAmount <= 0 ? 'COMPLETED' : 'PENDING',
+        status,
         notes: billData.notes,
       },
     });
 
     console.log(`Bill created with ID: ${newBill.id} and Bill Number: ${billNumber}`);
 
+    // Create bill items and update stock for non-payment bills
+    if (!isPaymentBill) {
+      await tx.billItem.createMany({
+        data: billItems.map(item => ({
+          billId: newBill.id,
+          ...item,
+        })),
+      });
+
+      for (const item of (billData.items || [])) {
+        if (item.quantity > 0) {
+          // Only reduce stock for positive quantity items (sales)
+          const stock = await tx.stock.findUnique({
+            where: { productId: item.productId },
+          });
+
+          if (stock) {
+            await tx.stock.update({
+              where: { productId: item.productId },
+              data: {
+                quantity: Math.max(0, stock.quantity - item.quantity),
+              },
+            });
+          }
+        }
+        // Note: Negative quantity items (returns) are treated as wastage and do not affect stock
+      }
+    }
+
+    // Apply payments to pending bills
     if (shouldApplyToPending) {
       console.log(`Applying payment of ₹${receivedAmount} to pending bills for shop ${billData.shopId}`);
 
@@ -238,34 +278,45 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
       }
 
       console.log(`Payment application completed. Remaining payment: ₹${remainingPayment}`);
-    } else if (isPaymentBill && !shouldApplyToPending) {
-      console.log(`Payment bill created but payment not applied to pending bills (applyToPending=false)`);
-    } else {
-      await tx.billItem.createMany({
-        data: billItems.map(item => ({
-          billId: newBill.id,
-          ...item,
-        })),
+    } else if (excessPayment > 0) {
+      console.log(`Applying excess payment of ₹${excessPayment} to pending bills for shop ${billData.shopId}`);
+
+      const pendingBills = await tx.bill.findMany({
+        where: {
+          shopId: billData.shopId,
+          status: 'PENDING',
+        },
+        orderBy: {
+          billDate: 'asc',
+        },
       });
 
-      for (const item of (billData.items || [])) {
-        if (item.quantity > 0) {
-          // Only reduce stock for positive quantity items (sales)
-          const stock = await tx.stock.findUnique({
-            where: { productId: item.productId },
-          });
+      let remainingPayment = excessPayment;
 
-          if (stock) {
-            await tx.stock.update({
-              where: { productId: item.productId },
-              data: {
-                quantity: Math.max(0, stock.quantity - item.quantity),
-              },
-            });
-          }
-        }
-        // Note: Negative quantity items (returns) are treated as wastage and do not affect stock
+      for (const pendingBill of pendingBills) {
+        if (remainingPayment <= 0) break;
+
+        const paymentAmount = Math.min(remainingPayment, pendingBill.pendingAmount);
+        const newReceivedAmount = Math.round((pendingBill.receivedAmount + paymentAmount) * 100) / 100;
+        const newPendingAmount = Math.round((pendingBill.pendingAmount - paymentAmount) * 100) / 100;
+        const newStatus = newPendingAmount <= 0 ? 'COMPLETED' : 'PENDING';
+
+        await tx.bill.update({
+          where: { id: pendingBill.id },
+          data: {
+            receivedAmount: newReceivedAmount,
+            pendingAmount: newPendingAmount,
+            status: newStatus as any,
+          },
+        });
+
+        console.log(`Applied ₹${paymentAmount} to bill ${pendingBill.id}, new status: ${newStatus}`);
+        remainingPayment = Math.round((remainingPayment - paymentAmount) * 100) / 100;
       }
+
+      console.log(`Excess payment application completed. Remaining payment: ₹${remainingPayment}`);
+    } else if (isPaymentBill && !shouldApplyToPending) {
+      console.log(`Payment bill created but payment not applied to pending bills (applyToPending=false)`);
     }
 
     return newBill;
