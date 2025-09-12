@@ -1770,26 +1770,26 @@ const Billing: React.FC = () => {
                   <div className="ml-auto w-64">
                     <div className="flex justify-between py-1">
                       <div>Item Total:</div>
-                      <div>₹{
-                        currentBill
-                          .reduce((sum, item) => sum + item.amount, 0)
-                      }</div>
+                    <div>₹{
+                      currentBill
+                        .reduce((sum, item) => sum + item.amount, 0).toFixed(2)
+                    }</div>
                     </div>
 
                     <div className="flex justify-between py-1">
                       <div>SGST:</div>
-                      <div>₹{
-                        currentBill
-                          .reduce((sum, item) => sum + (item.sgst || 0), 0)
-                      }</div>
+                    <div>₹{
+                      currentBill
+                        .reduce((sum, item) => sum + (item.sgst || 0), 0).toFixed(2)
+                    }</div>
                     </div>
 
                     <div className="flex justify-between py-1">
                       <div>CGST:</div>
-                      <div>₹{
-                        currentBill
-                          .reduce((sum, item) => sum + (item.cgst || 0), 0)
-                      }</div>
+                    <div>₹{
+                      currentBill
+                        .reduce((sum, item) => sum + (item.cgst || 0), 0).toFixed(2)
+                    }</div>
                     </div>
 
                     {/* Previous Pending Amount */}
@@ -1811,8 +1811,8 @@ const Billing: React.FC = () => {
                     <div className="flex justify-between py-1 font-bold">
                       <div>Final Total:</div>
                       <div>₹{
-                        currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
-                        pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)
+                        (currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
+                        pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)).toFixed(2)
                       }</div>
                     </div>
                   </div>
@@ -2079,26 +2079,26 @@ const Billing: React.FC = () => {
                   <div className="ml-auto w-64">
                     <div className="flex justify-between py-1">
                       <div>Item Total:</div>
-                      <div>₹{
-                        selectedBillForView.items
-                          .reduce((sum, item) => sum + item.amount, 0)
-                      }</div>
+                    <div>₹{
+                      selectedBillForView.items
+                        .reduce((sum, item) => sum + item.amount, 0).toFixed(2)
+                    }</div>
                     </div>
 
                     <div className="flex justify-between py-1">
                       <div>SGST:</div>
-                      <div>₹{
-                        selectedBillForView.items
-                          .reduce((sum, item) => sum + (item.sgst || 0), 0)
-                      }</div>
+                    <div>₹{
+                      selectedBillForView.items
+                        .reduce((sum, item) => sum + (item.sgst || 0), 0).toFixed(2)
+                    }</div>
                     </div>
 
                     <div className="flex justify-between py-1">
                       <div>CGST:</div>
-                      <div>₹{
-                        selectedBillForView.items
-                          .reduce((sum, item) => sum + (item.cgst || 0), 0)
-                      }</div>
+                    <div>₹{
+                      selectedBillForView.items
+                        .reduce((sum, item) => sum + (item.cgst || 0), 0).toFixed(2)
+                    }</div>
                     </div>
 
                     {/* Previous Pending Amount - Only show if there is actual previous pending */}
@@ -2128,7 +2128,7 @@ const Billing: React.FC = () => {
 
                     <div className="flex justify-between py-1 font-bold">
                       <div>Final Total:</div>
-                      <div>₹{selectedBillForView.total_amount}</div>
+                      <div>₹{selectedBillForView.total_amount.toFixed(2)}</div>
                     </div>
 
                   {/* Payment Details */}
@@ -2136,13 +2136,13 @@ const Billing: React.FC = () => {
 
                   <div className="flex justify-between py-1">
                     <div>Received Amount:</div>
-                    <div>₹{selectedBillForView.received_amount}</div>
+                    <div>₹{selectedBillForView.received_amount.toFixed(2)}</div>
                   </div>
 
                   <div className="flex justify-between py-1">
                     <div>Pending Amount:</div>
                     <div className={selectedBillForView.pending_amount > 0 ? "text-red-600 font-medium" : ""}>
-                      ₹{selectedBillForView.pending_amount}
+                      ₹{selectedBillForView.pending_amount.toFixed(2)}
                     </div>
                   </div>
 
