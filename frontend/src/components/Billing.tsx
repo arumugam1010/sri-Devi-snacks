@@ -110,7 +110,7 @@ const Billing: React.FC = () => {
 
   const [productForm, setProductForm] = useState({
     product_id: '',
-    quantity: 1
+    quantity: ''
   });
 
   // Get all products for the selected shop, or all products if none are priced for the shop
@@ -149,7 +149,7 @@ const Billing: React.FC = () => {
     setPendingBills([]);
     setIsPayPendingMode(false);
     setPendingPaymentAmount(0);
-    setProductForm({ product_id: '', quantity: 1 });
+    setProductForm({ product_id: '', quantity: '' });
   };
 
   const handleShopSelect = (shopId: number | null) => {
@@ -159,7 +159,7 @@ const Billing: React.FC = () => {
     }
     if (shopId === null) {
       setSelectedShop(null);
-      setProductForm({ product_id: '', quantity: 1 });
+      setProductForm({ product_id: '', quantity: '' });
       setPendingBills([]);
       setIsPayPendingMode(false);
       setPendingPaymentAmount(0);
@@ -196,17 +196,25 @@ const Billing: React.FC = () => {
       setIsPayPendingMode(false);
     }
     
-    setProductForm({ product_id: '', quantity: 1 });
+    setProductForm({ product_id: '', quantity: '' });
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const productId = parseInt(productForm.product_id);
+    const quantity = parseInt(productForm.quantity) || 1;
+
+    // Validate quantity
+    if (quantity < 1) {
+      alert('Quantity must be at least 1');
+      return;
+    }
+
     const product = allProductsForShop.find(p => p.product_id === productId);
-    
+
     if (!product) return;
-    
+
     // Check if product has a price set
     if (product.price === 0) {
       alert('Please set a price for this product before adding it to the bill.');
@@ -216,21 +224,21 @@ const Billing: React.FC = () => {
     // Check stock availability
     const baseProduct = products.find(p => p.id === product.product_id);
     if (!baseProduct) return;
-    
-    const totalRequestedQuantity = productForm.quantity + 
+
+    const totalRequestedQuantity = quantity +
       (currentBill.find(item => item.product_id === product.product_id)?.quantity || 0);
-    
+
     if (totalRequestedQuantity > baseProduct.quantity) {
       alert(`Not enough stock available! Available: ${baseProduct.quantity}, Requested: ${totalRequestedQuantity}`);
       return;
     }
 
     const existingItemIndex = currentBill.findIndex(item => item.product_id === product.product_id);
-    
+
     if (existingItemIndex >= 0) {
       // Update existing item
       const updatedBill = [...currentBill];
-      updatedBill[existingItemIndex].quantity += productForm.quantity;
+      updatedBill[existingItemIndex].quantity += quantity;
       updatedBill[existingItemIndex].amount = updatedBill[existingItemIndex].quantity * updatedBill[existingItemIndex].price;
       // Recalculate SGST and CGST
       if (product.gst) {
@@ -241,30 +249,30 @@ const Billing: React.FC = () => {
       setCurrentBill(updatedBill);
     } else {
       // Add new item
-      const amount = product.price * productForm.quantity;
+      const amount = product.price * quantity;
       const newItem: BillItem = {
         id: Date.now(),
         product_id: product.product_id,
         product_name: product.product_name,
         price: product.price,
-        quantity: productForm.quantity,
+        quantity: quantity,
         amount: amount,
         unit: product.unit,
         hsn_code: product.hsn_code
       };
-      
+
       // Calculate SGST and CGST
       if (product.gst) {
         const gstAmount = (amount * product.gst) / 100;
         newItem.sgst = gstAmount / 2;
         newItem.cgst = gstAmount / 2;
       }
-      
+
       setCurrentBill([...currentBill, newItem]);
       setHasPrinted(false); // Reset print status when items are added
     }
 
-    setProductForm({ product_id: '', quantity: 1 });
+    setProductForm({ product_id: '', quantity: '' });
   };
 
   const handleRemoveItem = (itemId: number) => {
@@ -1273,8 +1281,9 @@ const Billing: React.FC = () => {
                     <input
                       type="number"
                       min="1"
+                      placeholder="1"
                       value={productForm.quantity}
-                      onChange={(e) => setProductForm({...productForm, quantity: parseInt(e.target.value) || 1})}
+                      onChange={(e) => setProductForm({...productForm, quantity: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
