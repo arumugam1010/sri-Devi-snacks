@@ -126,6 +126,7 @@ model BillItem {
   amount    Float
   sgst      Float    @default(0)
   cgst      Float    @default(0)
+  hsnCode   String?  @map("hsn_code")
   createdAt DateTime @default(now())
 
   // Relations

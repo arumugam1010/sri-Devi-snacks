@@ -73,6 +73,7 @@ export const createBillSchema = z.object({
     rate: z.number().min(0, 'Rate cannot be negative'),
     sgst: z.number().min(0, 'SGST cannot be negative').optional(),
     cgst: z.number().min(0, 'CGST cannot be negative').optional(),
+    hsnCode: z.string().optional(),
   })).optional().default([]),
 });
 

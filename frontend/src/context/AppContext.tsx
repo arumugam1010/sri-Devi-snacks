@@ -251,6 +251,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           rate: item.rate,
           sgst: item.sgst !== undefined ? item.sgst : 0,
           cgst: item.cgst !== undefined ? item.cgst : 0,
+          hsnCode: item.hsn_code,
         })),
       };
 

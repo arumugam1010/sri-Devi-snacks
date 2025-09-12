@@ -160,6 +160,14 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
     // Generate unique bill number
     const billNumber = await generateBillNumber();
 
+    // Get products for HSN codes
+    const productIds = billData.items?.map(item => item.productId) || [];
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, hsnCode: true }
+    });
+    const productMap = new Map(products.map(p => [p.id, p.hsnCode]));
+
   // Calculate totals
   let totalAmount = 0;
   const billItems = (billData.items || []).map(item => {
@@ -174,6 +182,7 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
       amount,
       sgst,
       cgst,
+      hsnCode: item.hsnCode || productMap.get(item.productId) || '',
     };
   });
 
@@ -214,9 +223,9 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
     // Create bill items and update stock for non-payment bills
     if (!isPaymentBill) {
       await tx.billItem.createMany({
-        data: billItems.map(item => ({
+        data: billItems.map((item) => ({
           billId: newBill.id,
-          ...item,
+          ...item
         })),
       });
 

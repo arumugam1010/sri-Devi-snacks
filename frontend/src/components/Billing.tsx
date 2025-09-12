@@ -17,7 +17,7 @@ interface BillItem {
   gst?: number;
   sgst?: number;
   cgst?: number;
-  hsn_code: string;
+  hsnCode: string;
 }
 
 interface Bill {
@@ -127,7 +127,7 @@ const Billing: React.FC = () => {
           const shopPricing = shopProducts.find(sp =>
             sp.shop_id === selectedShop && sp.product_id === product.id
           );
-          return {
+          const productData = {
             id: Date.now() + product.id, // temporary ID
             shop_id: selectedShop,
             product_id: product.id,
@@ -138,6 +138,8 @@ const Billing: React.FC = () => {
             stock_quantity: product.quantity, // include stock quantity
             hsn_code: product.hsn_code // inherit hsn_code from base product
           };
+          console.log('Product data for shop:', product.product_name, 'HSN Code:', productData.hsn_code);
+          return productData;
         })
     : [];
   const currentShop = shops.find(shop => shop.id === selectedShop);
@@ -255,6 +257,7 @@ const Billing: React.FC = () => {
     } else {
       // Add new item
       const amount = product.price * quantity;
+      console.log('Adding product:', product.product_name, 'HSN Code:', product.hsn_code);
       const newItem: BillItem = {
         id: Date.now(),
         product_id: product.product_id,
@@ -263,8 +266,9 @@ const Billing: React.FC = () => {
         quantity: quantity,
         amount: amount,
         unit: product.unit,
-        hsn_code: product.hsn_code
+        hsnCode: product.hsn_code
       };
+      console.log('New item HSN Code:', newItem.hsnCode);
 
       // Calculate SGST and CGST only for positive quantity items (sales)
       if (product.gst && quantity > 0) {
@@ -411,21 +415,22 @@ const Billing: React.FC = () => {
     const nextBillNumber = billsInFinancialYear.length + 1;
 
     const newBill: Bill = {
-      id: `B${String(nextBillNumber).padStart(3, '0')}`,
-      shop_id: selectedShop,
-      shop_name: currentShop?.shop_name || '',
-      bill_date: new Date().toISOString(),
-      total_amount: finalTotal,
-      received_amount: parseFloat(receivedAmount || "0"),
-      pending_amount: pendingAmount,
-      status: billStatus,
-      items: currentBill.map(item => ({
-        ...item,
-        rate: item.price,
-        sgst: item.sgst || 0,
-        cgst: item.cgst || 0
-      }))
-    };
+          id: `B${String(nextBillNumber).padStart(3, '0')}`,
+          shop_id: selectedShop,
+          shop_name: currentShop?.shop_name || '',
+          bill_date: new Date().toISOString(),
+          total_amount: finalTotal,
+          received_amount: parseFloat(receivedAmount || "0"),
+          pending_amount: pendingAmount,
+          status: billStatus,
+          items: currentBill.map(item => ({
+            ...item,
+            rate: item.price,
+            sgst: item.sgst || 0,
+            cgst: item.cgst || 0,
+            hsnCode: item.hsnCode
+          }))
+        };
 
     try {
       // Use the context's addBill method which automatically handles stock updates
@@ -578,7 +583,7 @@ const Billing: React.FC = () => {
           quantity: -quantity, // Negative quantity for return items
           amount: amount,
           unit: product.unit,
-          hsn_code: product.hsn_code
+          hsnCode: product.hsn_code
         };
         
         // For return items, set SGST and CGST to 0 (no tax for returns)
@@ -1482,31 +1487,31 @@ const Billing: React.FC = () => {
                                   win.document.write(`
                                     <tr>
                                       <td>${item.product_name}</td>
-                                      <td style="text-align: right;">${item.hsn_code}</td>
+                                      <td style="text-align: right;">${item.hsnCode || 'N/A'}</td>
                                       <td style="text-align: right;">${item.quantity}</td>
                                       <td style="text-align: right;">₹${item.price}</td>
                                       <td style="text-align: right;">₹${item.amount}</td>
                                     </tr>
                                   `);
                                 });
-                                
-                                // Return items
-                                if (currentBill.filter(item => item.quantity < 0).length > 0) {
-                                  win.document.write(`
-                                    <tr><td colspan="5" style="padding-top: 15px; font-weight: bold;">Return Items</td></tr>
-                                  `);
-                                  currentBill.filter(item => item.quantity < 0).forEach(item => {
-                                    win.document.write(`
-                                      <tr>
-                                        <td>${item.product_name}</td>
-                                        <td style="text-align: right;">${item.hsn_code}</td>
-                                        <td style="text-align: right;">${item.quantity}</td>
-                                        <td style="text-align: right;">₹${item.price}</td>
-                                        <td style="text-align: right;">₹${item.amount}</td>
-                                      </tr>
-                                    `);
-                                  });
-                                }
+
+                        // Return items
+                        if (currentBill.filter(item => item.quantity < 0).length > 0) {
+                          win.document.write(`
+                            <tr><td colspan="5" style="padding-top: 15px; font-weight: bold;">Return Items</td></tr>
+                          `);
+                          currentBill.filter(item => item.quantity < 0).forEach(item => {
+                            win.document.write(`
+                              <tr>
+                                <td>${item.product_name}</td>
+                                <td style="text-align: right;">${item.hsnCode || 'N/A'}</td>
+                                <td style="text-align: right;">${item.quantity}</td>
+                                <td style="text-align: right;">₹${item.price}</td>
+                                <td style="text-align: right;">₹${item.amount}</td>
+                              </tr>
+                            `);
+                          });
+                        }
                                 
                                 win.document.write('</tbody></table>');
                                 
@@ -1716,15 +1721,18 @@ const Billing: React.FC = () => {
                     <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
 
                     {/* Regular Items */}
-                    {currentBill.filter(item => item.quantity > 0).map((item) => (
-                      <div key={`item-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
-                        <div>{item.product_name}</div>
-                        <div className="text-right">{item.hsn_code}</div>
-                        <div className="text-right">{item.quantity}</div>
-                        <div className="text-right">₹{item.price}</div>
-                        <div className="text-right">₹{item.amount}</div>
-                      </div>
-                    ))}
+                    {currentBill.filter(item => item.quantity > 0).map((item) => {
+                      console.log('Displaying item:', item.product_name, 'HSN Code:', item.hsnCode);
+                      return (
+                        <div key={`item-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
+                          <div>{item.product_name}</div>
+                          <div className="text-right">{item.hsnCode || 'N/A'}</div>
+                          <div className="text-right">{item.quantity}</div>
+                          <div className="text-right">₹{item.price}</div>
+                          <div className="text-right">₹{item.amount}</div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Return Items */}
@@ -1741,15 +1749,18 @@ const Billing: React.FC = () => {
                         </div>
                         <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
 
-                        {currentBill.filter(item => item.quantity < 0).map((item) => (
-                          <div key={`return-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
-                            <div>{item.product_name}</div>
-                            <div className="text-right">{item.hsn_code}</div>
-                            <div className="text-right">{item.quantity}</div>
-                            <div className="text-right">₹{item.price}</div>
-                            <div className="text-right">₹{item.amount}</div>
-                          </div>
-                        ))}
+                        {currentBill.filter(item => item.quantity < 0).map((item) => {
+                          console.log('Displaying return item:', item.product_name, 'HSN Code:', item.hsnCode);
+                          return (
+                            <div key={`return-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
+                              <div>{item.product_name}</div>
+                              <div className="text-right">{item.hsnCode || 'N/A'}</div>
+                              <div className="text-right">{item.quantity}</div>
+                              <div className="text-right">₹{item.price}</div>
+                              <div className="text-right">₹{item.amount}</div>
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
                     </>
@@ -2035,7 +2046,7 @@ const Billing: React.FC = () => {
                   {selectedBillForView.items.filter(item => item.quantity > 0).map((item) => (
                     <div key={`view-item-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
                       <div>{item.product_name}</div>
-                      <div className="text-right">{item.hsn_code || 'N/A'}</div>
+                      <div className="text-right">{item.hsnCode || (item as any).product?.hsn_code || 'N/A'}</div>
                       <div className="text-right">{item.quantity}</div>
                       <div className="text-right">₹{item.price}</div>
                       <div className="text-right">₹{item.amount}</div>
@@ -2051,8 +2062,9 @@ const Billing: React.FC = () => {
                       <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
                       
                       {selectedBillForView.items.filter(item => item.quantity < 0).map((item) => (
-                        <div key={`view-return-${item.id}`} className="grid grid-cols-4 gap-4 py-2">
+                        <div key={`view-return-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
                           <div>{item.product_name}</div>
+                          <div className="text-right">{item.hsnCode || (item as any).product?.hsn_code || 'N/A'}</div>
                           <div className="text-right">{item.quantity}</div>
                           <div className="text-right">₹{item.price}</div>
                           <div className="text-right">₹{item.amount}</div>
@@ -2310,7 +2322,7 @@ const Billing: React.FC = () => {
                           win.document.write(`
                             <tr>
                               <td>${item.product_name}</td>
-                              <td style="text-align: right;">${item.hsn_code || 'N/A'}</td>
+                              <td style="text-align: right;">${item.hsnCode || (item as any).product?.hsn_code || 'N/A'}</td>
                               <td style="text-align: right;">${item.quantity}</td>
                               <td style="text-align: right;">₹${item.price}</td>
                               <td style="text-align: right;">₹${item.amount}</td>
@@ -2327,7 +2339,7 @@ const Billing: React.FC = () => {
                             win.document.write(`
                               <tr>
                                 <td>${item.product_name}</td>
-                                <td style="text-align: right;">${item.hsn_code || 'N/A'}</td>
+                                <td style="text-align: right;">${item.hsnCode || (item as any).product?.hsn_code || 'N/A'}</td>
                                 <td style="text-align: right;">${item.quantity}</td>
                                 <td style="text-align: right;">₹${item.price}</td>
                                 <td style="text-align: right;">₹${item.amount}</td>
