@@ -1256,7 +1256,7 @@ const Billing: React.FC = () => {
                       </>
                     )}
 
-                    {pendingBills.length > 0 && !isPayPendingMode && (
+                    {pendingBills.length > 0 && !isPayPendingMode && currentBill.length === 0 && (
                       <button
                         onClick={() => setIsPayPendingMode(true)}
                         className="w-full mt-3 inline-flex items-center justify-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition"
@@ -1804,8 +1804,10 @@ const Billing: React.FC = () => {
                     <div className="flex justify-between py-1 font-bold">
                       <div>Final Total:</div>
                       <div>₹{
-                        (currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
-                        pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)).toFixed(2)
+                        (
+                          currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
+                          pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)
+                        ).toFixed(2)
                       }</div>
                     </div>
                   </div>
