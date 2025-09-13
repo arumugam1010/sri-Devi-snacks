@@ -19,7 +19,7 @@ interface Product {
 }
 
 const Stock: React.FC = () => {
-  const { products, setProducts, refreshData } = useAppContext();
+  const { products, setProducts, refreshData, userRole } = useAppContext();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -371,13 +371,15 @@ const Stock: React.FC = () => {
                           >
                             -
                           </button>
-                          <button
-                            onClick={() => handleQuantityEdit(product)}
-                            className="px-1 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                            title="Edit quantity"
-                          >
-                            Edit
-                          </button>
+                          {userRole !== 'STAFF' && (
+                            <button
+                              onClick={() => handleQuantityEdit(product)}
+                              className="px-1 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                              title="Edit quantity"
+                            >
+                              Edit
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>

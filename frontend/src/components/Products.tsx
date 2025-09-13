@@ -33,7 +33,7 @@ interface ShopProduct {
 }
 
 const Products: React.FC = () => {
-  const { weeklySchedule, shopProducts, setShopProducts, products, setProducts } = useAppContext();
+  const { weeklySchedule, shopProducts, setShopProducts, products, setProducts, userRole } = useAppContext();
 
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -479,7 +479,7 @@ const Products: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        {activeTab === 'products' && (
+        {activeTab === 'products' && userRole !== 'STAFF' && (
           <button
             onClick={() => setShowModal(true)}
             className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
@@ -554,18 +554,22 @@ const Products: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEditProduct(product)}
-                          className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded transition"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {userRole !== 'STAFF' && (
+                          <button
+                            onClick={() => handleEditProduct(product)}
+                            className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        )}
+                        {userRole !== 'STAFF' && (
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded transition"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

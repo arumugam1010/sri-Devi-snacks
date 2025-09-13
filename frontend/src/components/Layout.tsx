@@ -12,6 +12,7 @@ import {
   Warehouse
 } from 'lucide-react';
 import Logo from '../assets/Logo.png';
+import { useAppContext } from '../context/AppContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,8 +23,9 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { userRole } = useAppContext();
 
-  const navigation = [
+  const allNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Shops', href: '/shops', icon: Store },
     { name: 'Products', href: '/products', icon: Package },
@@ -31,6 +33,14 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
     { name: 'Billing', href: '/billing', icon: Receipt },
     { name: 'Reports', href: '/reports', icon: BarChart3 },
   ];
+
+  // Filter navigation based on user role
+  const navigation = allNavigation.filter(item => {
+    if (userRole === 'STAFF') {
+      return item.name !== 'Reports';
+    }
+    return true;
+  });
 
   const isActive = (href: string) => location.pathname === href;
 

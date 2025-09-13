@@ -156,6 +156,7 @@ enum Role {
   USER
   ADMIN
   SUPER_ADMIN
+  STAFF
 }
 
 enum Status {

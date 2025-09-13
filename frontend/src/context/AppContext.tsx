@@ -73,6 +73,8 @@ interface AppContextType {
   loading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
+  userRole: string | null;
+  setUserRole: (role: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -99,30 +101,31 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Fetch initial data from backend
   const refreshData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Fetch products
-      const productsResponse = await productsAPI.getProducts({ limit: 100 });
-      let productsData: any[] = [];
-      if (productsResponse.success) {
-        productsData = productsResponse.data.map((p: any) => ({
-          id: p.id,
-          product_name: p.productName,
-          unit: p.unit,
-          status: p.status,
-          created_date: p.createdAt,
-          gst: p.gst,
-          quantity: p.stocks?.[0]?.quantity || 0,
-          rate: p.price || 0,  // Use price from products as rate
-          hsn_code: p.hsnCode,
-          price: p.price || 0,
-          stockId: p.stocks?.[0]?.id || null,
-        }));
-      }
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch products
+        const productsResponse = await productsAPI.getProducts({ limit: 100 });
+        let productsData: any[] = [];
+        if (productsResponse.success) {
+          productsData = productsResponse.data.map((p: any) => ({
+            id: p.id,
+            product_name: p.productName,
+            unit: p.unit,
+            status: p.status,
+            created_date: p.createdAt,
+            gst: p.gst,
+            quantity: p.stocks?.[0]?.quantity || 0,
+            rate: p.price || 0,  // Use price from products as rate
+            hsn_code: p.hsnCode,
+            price: p.price || 0,
+            stockId: p.stocks?.[0]?.id || null,
+          }));
+        }
 
       // Fetch stocks and merge with products
       const stocksResponse = await stocksAPI.getStocks();
@@ -224,6 +227,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
+
+  // Fetch user profile to get role
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/users/profile', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUserRole(data.data.role);
+      } else {
+        setUserRole(null);
+      }
+    } catch (error) {
+      setUserRole(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -340,6 +366,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     loading,
     error,
     refreshData,
+    userRole,
+    setUserRole,
   };
 
   return (

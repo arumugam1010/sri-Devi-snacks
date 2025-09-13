@@ -17,7 +17,7 @@ interface Shop {
 }
 
 const Shops: React.FC = () => {
-  const { weeklySchedule, setWeeklySchedule } = useAppContext();
+  const { weeklySchedule, setWeeklySchedule, userRole } = useAppContext();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -366,6 +366,7 @@ const Shops: React.FC = () => {
               <h2 className="text-2xl font-bold text-gray-900">Shop Management</h2>
               <p className="text-gray-600 mt-1">Manage your delivery shops and their information</p>
             </div>
+          {userRole !== 'STAFF' && (
             <button
               onClick={() => setShowModal(true)}
               className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
@@ -373,6 +374,7 @@ const Shops: React.FC = () => {
               <Plus className="h-5 w-5 mr-2" />
               Add Shop
             </button>
+          )}
           </div>
 
           {/* Search and Stats */}
@@ -470,18 +472,22 @@ const Shops: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEdit(shop)}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(shop.id)}
-                            className="text-red-600 hover:text-red-900 p-1 rounded transition"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {userRole !== 'STAFF' && (
+                            <button
+                              onClick={() => handleEdit(shop)}
+                              className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          )}
+                          {userRole !== 'STAFF' && (
+                            <button
+                              onClick={() => handleDelete(shop.id)}
+                              className="text-red-600 hover:text-red-900 p-1 rounded transition"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
