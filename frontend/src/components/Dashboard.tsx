@@ -102,13 +102,13 @@ const Dashboard: React.FC = () => {
         <div>
           <p className="text-sm font-medium text-gray-600">{title}</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          {change && (
+          {/* {change && (
             <div className="flex items-center mt-2">
               <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
               <span className="text-sm text-green-600">+{change}%</span>
-              <span className="text-sm text-gray-500 ml-1">from yesterday</span>
+              <span className="text-sm text-gray-500 ml-1">from yesterday</span> 
             </div>
-          )}
+          )} */}
         </div>
         <div className={`p-3 rounded-full bg-${color}-100`}>
           <Icon className={`h-6 w-6 text-${color}-600`} />
