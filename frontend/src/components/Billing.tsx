@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { billsAPI } from '../services/api';
 import GPayQRCode from './GPayQRCode';
 import Logo from '../assets/Logo.png';
+import { Pagination } from './Pagination';
 
 interface BillItem {
   id: number;
@@ -46,6 +47,41 @@ const Billing: React.FC = () => {
   
   // Mock data
   const { weeklySchedule } = useAppContext();
+
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalBills, setTotalBills] = React.useState(0);
+  const [paginatedBills, setPaginatedBills] = React.useState<Bill[]>([]);
+  const [loading, setLoading] = React.useState(false);
+
+  // Pagination for month-wise bills
+  const [monthCurrentPage, setMonthCurrentPage] = React.useState(1);
+  const [monthTotalPages, setMonthTotalPages] = React.useState(1);
+  const monthItemsPerPage = 5;
+
+  // Fetch bills with pagination
+  React.useEffect(() => {
+    const fetchBills = async () => {
+      setLoading(true);
+      try {
+        const response = await billsAPI.getBills({
+          page: currentPage,
+          limit: 5, // Show 5 bills per page
+        });
+        if (response.success) {
+          setPaginatedBills(response.data);
+          setTotalPages(response.pagination.totalPages);
+          setTotalBills(response.pagination.total);
+        }
+      } catch (error) {
+        console.error('Failed to fetch bills:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBills();
+  }, [currentPage]);
 
   // State for selected day to filter shops
   const [selectedDay, setSelectedDay] = React.useState<string | null>(null);
@@ -96,6 +132,11 @@ const Billing: React.FC = () => {
   const [currentBillForPayment, setCurrentBillForPayment] = useState<Bill | null>(null);
   const [hasPrinted, setHasPrinted] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<{financialYear: string; monthName: string} | null>(null);
+
+  // Reset month pagination when month changes
+  React.useEffect(() => {
+    setMonthCurrentPage(1);
+  }, [selectedMonth]);
 
   // State for selected bill for returns
   const [selectedBillForReturn, setSelectedBillForReturn] = useState<Bill | null>(null);
@@ -734,24 +775,75 @@ const Billing: React.FC = () => {
   // Group bills by financial year and month
   const groupedBills = React.useMemo(() => {
     const grouped: {[key: string]: {[key: string]: Bill[]}} = {};
-    
+
     bills.forEach(bill => {
       const financialYear = getFinancialYear(bill.bill_date);
       const monthName = getMonthName(bill.bill_date);
-      
+
       if (!grouped[financialYear]) {
         grouped[financialYear] = {};
       }
-      
+
       if (!grouped[financialYear][monthName]) {
         grouped[financialYear][monthName] = [];
       }
-      
+
       grouped[financialYear][monthName].push(bill);
     });
-    
+
     return grouped;
   }, [bills]);
+
+  // Calculate month pagination data
+  const monthPaginationData = React.useMemo(() => {
+    if (!selectedMonth) return null;
+
+    const { financialYear, monthName } = selectedMonth;
+    const monthBills = groupedBills[financialYear]?.[monthName] || [];
+
+    // Sort bills by date (most recent first)
+    const sortedMonthBills = monthBills
+      .slice()
+      .sort((a, b) => {
+        return new Date(b.bill_date).getTime() - new Date(a.bill_date).getTime();
+      });
+
+    const monthTotalItems = sortedMonthBills.length;
+    const monthStartIndex = (monthCurrentPage - 1) * monthItemsPerPage;
+    const monthEndIndex = monthStartIndex + monthItemsPerPage;
+    const paginatedMonthBills = sortedMonthBills.slice(monthStartIndex, monthEndIndex);
+
+    // Calculate total bills in the financial year
+    const financialYearBills = Object.values(groupedBills[financialYear] || {}).flat();
+    const financialYearBillCount = financialYearBills.length;
+
+    return {
+      sortedMonthBills,
+      paginatedMonthBills,
+      monthTotalItems,
+      financialYearBillCount
+    };
+  }, [selectedMonth, groupedBills, monthCurrentPage, monthItemsPerPage]);
+
+  // Update month total pages when month pagination data changes
+  React.useEffect(() => {
+    if (monthPaginationData) {
+      const newMonthTotalPages = Math.ceil(monthPaginationData.monthTotalItems / monthItemsPerPage);
+      setMonthTotalPages(newMonthTotalPages);
+      // Reset to first page if current page exceeds total pages
+      if (monthCurrentPage > newMonthTotalPages && newMonthTotalPages > 0) {
+        setMonthCurrentPage(1);
+      }
+    }
+  }, [monthPaginationData?.monthTotalItems, monthCurrentPage, monthItemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleMonthPageChange = (page: number) => {
+    setMonthCurrentPage(page);
+  };
 
   return (
     <div className="space-y-6">
@@ -838,55 +930,26 @@ const Billing: React.FC = () => {
           </div>
           
           {(() => {
-            // Group bills by financial year and month
-            const financialYearGroups: {[key: string]: {[key: string]: Bill[]}} = {};
-            
-            bills.forEach(bill => {
-              const billDate = new Date(bill.bill_date);
-              const year = billDate.getFullYear();
-              const month = billDate.getMonth();
-              const monthName = billDate.toLocaleString('default', { month: 'long' });
-              
-              // Determine financial year (April to March)
-              const financialYear = billDate.getMonth() >= 3 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-              
-              if (!financialYearGroups[financialYear]) {
-                financialYearGroups[financialYear] = {};
-              }
-              
-              if (!financialYearGroups[financialYear][monthName]) {
-                financialYearGroups[financialYear][monthName] = [];
-              }
-              
-              financialYearGroups[financialYear][monthName].push(bill);
-            });
-            
             // Sort financial years in descending order
-            const sortedFinancialYears = Object.keys(financialYearGroups).sort((a, b) => {
+            const sortedFinancialYears = Object.keys(groupedBills).sort((a, b) => {
               const [aStart] = a.split('-').map(Number);
               const [bStart] = b.split('-').map(Number);
               return bStart - aStart;
             });
-            
+
             // If a specific month is selected, show bills for that month
-            if (selectedMonth) {
+            if (selectedMonth && monthPaginationData) {
               const { financialYear, monthName } = selectedMonth;
-              const monthBills = financialYearGroups[financialYear]?.[monthName] || [];
-              
+              const { paginatedMonthBills, sortedMonthBills } = monthPaginationData;
+
               return (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4">
                     {monthName} {financialYear}
                   </h4>
-                  
+
                   <div className="space-y-4">
-              {monthBills
-                .slice()
-                .sort((a, b) => {
-                  // Sort by bill date (most recent first) since bill numbers reset annually
-                  return new Date(b.bill_date).getTime() - new Date(a.bill_date).getTime();
-                })
-                .map((bill) => (
+              {paginatedMonthBills.map((bill) => (
                   <div key={bill.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -897,20 +960,20 @@ const Billing: React.FC = () => {
                       <div className="text-right">
                         <p className="font-semibold text-sm">₹{bill.pending_amount}</p>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-      bill.status === 'COMPLETED' 
-        ? 'bg-green-100 text-green-800' 
+      bill.status === 'COMPLETED'
+        ? 'bg-green-100 text-green-800'
         : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {bill.status}
                         </span>
                       </div>
                     </div>
-                    
+
                               <div className="flex justify-between text-xs text-gray-600 mb-3">
                                 <span>Received: ₹{bill.received_amount}</span>
                                 <span>Pending: ₹{bill.pending_amount}</span>
                               </div>
-                    
+
                     <div className="flex justify-between space-x-3">
                       <button
                         onClick={() => setSelectedBillForView(bill)}
@@ -933,35 +996,46 @@ const Billing: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                    
-                    {monthBills.length === 0 && (
+
+                    {sortedMonthBills.length === 0 && (
                       <div className="text-center py-8">
                         <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-sm text-gray-500">No bills found for {monthName} {financialYear}</p>
                       </div>
                     )}
                   </div>
+
+                  {/* Pagination for month bills */}
+                  {monthPaginationData?.financialYearBillCount > 5 && (
+                    <div className="mt-6">
+                      <Pagination
+                        currentPage={monthCurrentPage}
+                        totalPages={monthTotalPages}
+                        onPageChange={handleMonthPageChange}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             }
-            
+
             // Show month cards overview
             return (
               <div className="space-y-8">
                 {sortedFinancialYears.map(financialYear => (
                   <div key={financialYear} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Financial Year {financialYear}</h4>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {Object.entries(financialYearGroups[financialYear])
+                      {Object.entries(groupedBills[financialYear])
                         .sort(([aMonth], [bMonth]) => {
-                          const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          const months = ['January', 'February', 'March', 'April', 'May', 'June',
                                          'July', 'August', 'September', 'October', 'November', 'December'];
                           return months.indexOf(bMonth) - months.indexOf(aMonth);
                         })
                         .map(([monthName, monthBills]) => (
-                          <div 
-                            key={monthName} 
+                          <div
+                            key={monthName}
                             className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors"
                             onClick={() => setSelectedMonth({ financialYear, monthName })}
                           >
@@ -971,12 +1045,12 @@ const Billing: React.FC = () => {
                                 {monthBills.length} bill{monthBills.length !== 1 ? 's' : ''}
                               </span>
                             </div>
-                            
+
                             <div className="text-sm text-gray-600">
                             <p>Total: ₹{monthBills.reduce((sum, bill) => sum + bill.total_amount, 0).toFixed(2)}</p>
                             <p>Pending: ₹{monthBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toFixed(2)}</p>
                             </div>
-                            
+
                             <div className="mt-3 text-xs text-gray-500">
                               Click to view all bills
                             </div>
@@ -984,13 +1058,13 @@ const Billing: React.FC = () => {
                         ))
                       }
                     </div>
-                    
-                    {Object.keys(financialYearGroups[financialYear]).length === 0 && (
+
+                    {Object.keys(groupedBills[financialYear]).length === 0 && (
                       <p className="text-sm text-gray-500 text-center py-8">No bills for financial year {financialYear}</p>
                     )}
                   </div>
                 ))}
-                
+
                 {sortedFinancialYears.length === 0 && (
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
                     <ShoppingCart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -1001,6 +1075,8 @@ const Billing: React.FC = () => {
               </div>
             );
           })()}
+
+
         </div>
       )}
 

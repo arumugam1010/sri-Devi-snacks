@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Package, Tag, DollarSign, ArrowLeft, Store } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { productsAPI, shopsAPI } from '../services/api';
+import { Pagination } from './Pagination';
 
 interface Product {
   id: number;
@@ -35,6 +36,8 @@ const Products: React.FC = () => {
   const { weeklySchedule, shopProducts, setShopProducts, products, setProducts } = useAppContext();
 
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [activeTab, setActiveTab] = useState<'products' | 'pricing'>('products');
   const [showModal, setShowModal] = useState(false);
@@ -44,6 +47,39 @@ const Products: React.FC = () => {
   const [selectedShop, setSelectedShop] = useState<number | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
   const [priceEditValue, setPriceEditValue] = useState<string>('');
+
+  // Fetch paginated products
+  React.useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await productsAPI.getProducts({ page: currentPage, limit: 5, search: searchTerm });
+        if (response.success) {
+          const fetchedProducts: Product[] = response.data.map((product: any) => ({
+            id: product.id,
+            product_name: product.productName,
+            unit: product.unit,
+            status: 'active',
+            created_date: new Date(product.createdAt).toISOString().split('T')[0],
+            gst: product.gst,
+            quantity: 0,
+            rate: product.price || 0,
+            hsn_code: product.hsnCode,
+            price: product.price || 0,
+            stockId: null,
+          }));
+          setProducts(fetchedProducts);
+          setTotalPages(response.pagination.totalPages);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [currentPage, searchTerm]);
 
   // New useEffect to preload shopProducts for all shops in weeklySchedule
   React.useEffect(() => {
@@ -98,6 +134,10 @@ const Products: React.FC = () => {
     product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.unit.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -533,6 +573,11 @@ const Products: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </div>
       )}
 

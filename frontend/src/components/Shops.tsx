@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Phone, MapPin, Store, Calendar } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { shopsAPI, schedulesAPI } from '../services/api';
+import { Pagination } from './Pagination';
 import type { DaySchedule } from '../context/AppContext';
 
 interface Shop {
@@ -20,6 +21,9 @@ const Shops: React.FC = () => {
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalShops, setTotalShops] = useState(0);
 
   const [activeTab, setActiveTab] = useState<'shops' | 'schedule'>('shops');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -42,8 +46,8 @@ const Shops: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch shops
-        const shopsResponse = await shopsAPI.getShops({ limit: 100 });
+        // Fetch shops with pagination
+        const shopsResponse = await shopsAPI.getShops({ page: currentPage, limit: 5, search: searchTerm });
         if (shopsResponse.success) {
           const fetchedShops: Shop[] = shopsResponse.data.map((shop: any) => ({
             id: shop.id,
@@ -56,6 +60,8 @@ const Shops: React.FC = () => {
             created_date: new Date(shop.createdAt).toISOString().split('T')[0],
           }));
           setShops(fetchedShops);
+          setTotalPages(shopsResponse.pagination.totalPages);
+          setTotalShops(shopsResponse.pagination.total);
 
           // Fetch existing schedules
           const schedulesResponse = await schedulesAPI.getSchedules();
@@ -114,13 +120,17 @@ const Shops: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
-  const filteredShops = shops.filter(shop =>
+  const filteredShops = shops.filter((shop: Shop) =>
     shop.shop_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     shop.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
     shop.contact.includes(searchTerm)
   );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -380,7 +390,7 @@ const Shops: React.FC = () => {
               </div>
             </div>
             <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{shops.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{totalShops}</div>
               <div className="text-sm text-blue-800">Total Shops</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
@@ -480,6 +490,11 @@ const Shops: React.FC = () => {
               </table>
             </div>
             )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           </div>
 
           {/* Modal */}

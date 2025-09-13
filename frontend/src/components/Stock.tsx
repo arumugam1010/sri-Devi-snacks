@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Edit, Trash2, Package, IndianRupee, Warehouse } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { stocksAPI } from '../services/api';
+import { Pagination } from './Pagination';
 
 interface Product {
   id: number;
@@ -19,6 +20,10 @@ interface Product {
 
 const Stock: React.FC = () => {
   const { products, setProducts } = useAppContext();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 5;
 
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -48,6 +53,25 @@ const Stock: React.FC = () => {
     product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.unit.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Calculate pagination
+  const totalItems = filteredProducts.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Update total pages when filtered products change
+  React.useEffect(() => {
+    setTotalPages(Math.ceil(totalItems / itemsPerPage));
+    // Reset to first page if current page exceeds total pages
+    if (currentPage > Math.ceil(totalItems / itemsPerPage) && Math.ceil(totalItems / itemsPerPage) > 0) {
+      setCurrentPage(1);
+    }
+  }, [filteredProducts.length, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const totalStockValue = products.reduce((total, product) => {
     return total + (product.quantity * getProductRate(product.id));
@@ -280,7 +304,7 @@ const Stock: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.map((product) => {
+              {paginatedProducts.map((product) => {
                 const productValue = product.quantity * product.rate;
                 return (
                   <tr key={product.id} className="hover:bg-gray-50">
@@ -370,6 +394,11 @@ const Stock: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       </div>
 
       {/* Product Modal */}
