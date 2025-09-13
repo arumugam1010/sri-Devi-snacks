@@ -30,7 +30,7 @@ export const updateShopSchema = createShopSchema.partial();
 export const createProductSchema = z.object({
   productName: z.string().min(2, 'Product name must be at least 2 characters'),
   unit: z.string().min(1, 'Unit is required'),
-  hsnCode: z.string().min(6, 'HSN code must be at least 6 characters'),
+  hsnCode: z.string(),
   gst: z.number().min(0).max(100, 'GST must be between 0 and 100'),
   price: z.number().min(0, 'Price cannot be negative').optional(),
 });
