@@ -1014,36 +1014,7 @@ const Billing: React.FC = () => {
                   <span className="font-semibold">{pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''}</span>{' '}
                   with a total outstanding balance of{' '}
                   <span className="font-bold text-lg">₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toLocaleString()}</span>
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {pendingBills.slice(0, 3).map((bill, index) => (
-                    <div key={bill.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      {bill.id}: ₹{bill.pending_amount.toLocaleString()}
-                    </div>
-                  ))}
-                  {pendingBills.length > 3 && (
-                    <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      +{pendingBills.length - 3} more
-                    </div>
-                  )}
-                </div>
-                <div className="mt-3 flex space-x-3">
-                  <button
-                    onClick={() => setIsPayPendingMode(true)}
-                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-md transition-colors"
-                  >
-                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z" />
-                    </svg>
-                    Pay Now
-                  </button>
-                  <button
-                    onClick={() => setShowPendingBillAlert(false)}
-                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                  >
-                    Continue Billing
-                  </button>
-                </div>
+                </p>  
               </div>
             </div>
           </div>
@@ -1845,13 +1816,8 @@ const Billing: React.FC = () => {
                   ×
                 </button>
               </div>
-              
               <div className="mb-6">
                 <h4 className="font-medium text-gray-900 mb-2">Process Returns for {currentShop?.shop_name}</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">All products are available for return processing</p>
-                  <p className="text-sm text-gray-600">Enter quantities for products to be returned</p>
-                </div>
               </div>
  
               <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
