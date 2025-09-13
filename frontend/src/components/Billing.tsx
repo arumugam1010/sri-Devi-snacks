@@ -60,6 +60,8 @@ const Billing: React.FC = () => {
   const monthItemsPerPage = 5;
 
   // Fetch bills with pagination
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+
   React.useEffect(() => {
     const fetchBills = async () => {
       setLoading(true);
@@ -81,7 +83,7 @@ const Billing: React.FC = () => {
     };
 
     fetchBills();
-  }, [currentPage]);
+  }, [currentPage, refreshTrigger]);
 
   // State for selected day to filter shops
   const [selectedDay, setSelectedDay] = React.useState<string | null>(null);
@@ -149,6 +151,7 @@ const Billing: React.FC = () => {
     receivedAmount: number;
     applyToPending: boolean;
   } | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const [productForm, setProductForm] = useState({
     product_id: '',
@@ -179,7 +182,6 @@ const Billing: React.FC = () => {
             stock_quantity: product.quantity, // include stock quantity
             hsn_code: product.hsn_code // inherit hsn_code from base product
           };
-          console.log('Product data for shop:', product.product_name, 'HSN Code:', productData.hsn_code);
           return productData;
         })
     : [];
@@ -194,6 +196,7 @@ const Billing: React.FC = () => {
     setIsPayPendingMode(false);
     setPendingPaymentAmount(0);
     setProductForm({ product_id: '', quantity: '' });
+    setPaymentCompleted(false);
   };
 
   const handleShopSelect = (shopId: number | null) => {
@@ -207,6 +210,7 @@ const Billing: React.FC = () => {
       setPendingBills([]);
       setIsPayPendingMode(false);
       setPendingPaymentAmount(0);
+      setPaymentCompleted(false);
       return;
     }
     
@@ -298,7 +302,6 @@ const Billing: React.FC = () => {
     } else {
       // Add new item
       const amount = product.price * quantity;
-      console.log('Adding product:', product.product_name, 'HSN Code:', product.hsn_code);
       const newItem: BillItem = {
         id: Date.now(),
         product_id: product.product_id,
@@ -309,7 +312,6 @@ const Billing: React.FC = () => {
         unit: product.unit,
         hsnCode: product.hsn_code
       };
-      console.log('New item HSN Code:', newItem.hsnCode);
 
       // Calculate SGST and CGST only for positive quantity items (sales)
       if (product.gst && quantity > 0) {
@@ -382,6 +384,11 @@ const Billing: React.FC = () => {
       if (totalPaid > 0) {
         const remainingBalance = shopPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
         alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${remainingBalance}`);
+        setPaymentCompleted(true);
+        setShowBillingInterface(false);
+        setSelectedMonth(null); // Reset to show financial year overview
+        setRefreshTrigger(prev => prev + 1); // Trigger bills list refresh
+        setShowPendingBillAlert(false); // Hide pending alert after payment
       }
     } catch (error) {
       console.error('Failed to update pending payments:', error);
@@ -498,6 +505,7 @@ const Billing: React.FC = () => {
       setIsPayPendingMode(false);
       setPendingPaymentAmount(0);
       setHasPrinted(false); // Reset print status when bill is saved
+      setSelectedMonth(null); // Reset to show financial year overview
       alert(`Bill ${newBill.id} saved successfully!\nFinal Amount: ₹${finalTotal}\nStatus: ${billStatus}\nStock updated for sold items.`);
     } catch (error: any) {
       console.error('Failed to save bill:', error);
@@ -526,7 +534,12 @@ const Billing: React.FC = () => {
       if (response.success) {
         // Refresh bills data to see updated pending amounts and statuses
         await refreshData();
+        setRefreshTrigger(prev => prev + 1); // Trigger bills list refresh
         alert(`Payment of ₹${paymentBillData.receivedAmount} applied successfully to pending bills!`);
+        setPaymentCompleted(true);
+        setShowBillingInterface(false);
+        setSelectedMonth(null); // Reset to show financial year overview
+        setShowPendingBillAlert(false); // Hide pending alert after payment
       } else {
         throw new Error(response.message || 'Failed to process payment');
       }
@@ -864,6 +877,7 @@ const Billing: React.FC = () => {
               setIsPayPendingMode(false);
               setPendingPaymentAmount(0);
               setIsPaymentBillMode(false);
+              setPaymentCompleted(false);
             }}
             className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
           >
@@ -897,9 +911,10 @@ const Billing: React.FC = () => {
           <button
             onClick={handleSaveBill}
             disabled={
-              isPaymentBillMode
+              paymentCompleted ||
+              (isPaymentBillMode
                 ? (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0)
-                : ((currentBill.length > 0 && !hasPrinted) || (currentBill.length === 0 && (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0)))
+                : ((currentBill.length > 0 && !hasPrinted) || (currentBill.length === 0 && (pendingBills.length === 0 || parseFloat(receivedAmount || "0") <= 0))))
             }
             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition"
           >
@@ -1791,7 +1806,6 @@ const Billing: React.FC = () => {
 
                     {/* Regular Items */}
                     {currentBill.filter(item => item.quantity > 0).map((item) => {
-                      console.log('Displaying item:', item.product_name, 'HSN Code:', item.hsnCode);
                       return (
                         <div key={`item-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
                           <div>{item.product_name}</div>
@@ -1819,7 +1833,6 @@ const Billing: React.FC = () => {
                         <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
 
                         {currentBill.filter(item => item.quantity < 0).map((item) => {
-                          console.log('Displaying return item:', item.product_name, 'HSN Code:', item.hsnCode);
                           return (
                             <div key={`return-${item.id}`} className="grid grid-cols-5 gap-4 py-2">
                               <div>{item.product_name}</div>
