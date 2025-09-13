@@ -357,28 +357,30 @@ const Stock: React.FC = () => {
                       ) : (
                         <div className="flex items-center space-x-2">
                           <span>{product.quantity}</span>
-                          <button
-                            onClick={() => handleQuantityAdjust(product.id, 1)}
-                            className="px-1 py-0.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                            title="Increase quantity"
-                          >
-                            +
-                          </button>
-                          <button
-                            onClick={() => handleQuantityAdjust(product.id, -1)}
-                            className="px-1 py-0.5 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                            title="Decrease quantity"
-                          >
-                            -
-                          </button>
                           {userRole !== 'STAFF' && (
-                            <button
-                              onClick={() => handleQuantityEdit(product)}
-                              className="px-1 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                              title="Edit quantity"
-                            >
-                              Edit
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleQuantityAdjust(product.id, 1)}
+                                className="px-1 py-0.5 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                                title="Increase quantity"
+                              >
+                                +
+                              </button>
+                              <button
+                                onClick={() => handleQuantityAdjust(product.id, -1)}
+                                className="px-1 py-0.5 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                                title="Decrease quantity"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => handleQuantityEdit(product)}
+                                className="px-1 py-0.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                title="Edit quantity"
+                              >
+                                Edit
+                              </button>
+                            </>
                           )}
                         </div>
                       )}

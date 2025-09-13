@@ -515,9 +515,11 @@ const Products: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  {userRole !== 'STAFF' && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -719,9 +721,11 @@ const Products: React.FC = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Price (₹)
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
+                        {userRole !== 'STAFF' && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -772,63 +776,69 @@ const Products: React.FC = () => {
                               </div>
                             ) : (
                               <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => {
-                                    if (pricing) {
-                                      const newPrice = pricing.price + 1;
-                                      handlePriceSave(pricing.id, newPrice);
-                                    }
-                                  }}
-                                  className="bg-green-600 text-white p-1 rounded hover:bg-green-700"
-                                  title="Increase Price"
-                                >
-                                  +
-                                </button>
+                                {userRole !== 'STAFF' && (
+                                  <button
+                                    onClick={() => {
+                                      if (pricing) {
+                                        const newPrice = pricing.price + 1;
+                                        handlePriceSave(pricing.id, newPrice);
+                                      }
+                                    }}
+                                    className="bg-green-600 text-white p-1 rounded hover:bg-green-700"
+                                    title="Increase Price"
+                                  >
+                                    +
+                                  </button>
+                                )}
                                   <span className="text-sm font-medium text-gray-900">
                                     {pricing ? `₹${pricing.price}` : `₹${product.price || 0}`}
                                   </span>
-                                <button
-                                  onClick={() => {
-                                    if (pricing && pricing.price > 0) {
-                                      const newPrice = pricing.price - 1;
-                                      handlePriceSave(pricing.id, newPrice);
-                                    }
-                                  }}
-                                  className="bg-red-600 text-white p-1 rounded hover:bg-red-700"
-                                  title="Decrease Price"
-                                >
-                                  -
-                                </button>
+                                {userRole !== 'STAFF' && (
+                                  <button
+                                    onClick={() => {
+                                      if (pricing && pricing.price > 0) {
+                                        const newPrice = pricing.price - 1;
+                                        handlePriceSave(pricing.id, newPrice);
+                                      }
+                                    }}
+                                    className="bg-red-600 text-white p-1 rounded hover:bg-red-700"
+                                    title="Decrease Price"
+                                  >
+                                    -
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              {pricing ? (
-                                <>
+                          {userRole !== 'STAFF' && (
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                {pricing ? (
+                                  <>
+                                    <button
+                                      onClick={() => handlePriceEdit(pricing)}
+                                      className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePricing(pricing.id)}
+                                      className="text-red-600 hover:text-red-900 p-1 rounded transition"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                ) : (
                                   <button
-                                    onClick={() => handlePriceEdit(pricing)}
-                                    className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
+                                    onClick={() => handleAddPricing(product.id)}
+                                    className="text-green-600 hover:text-green-900 p-1 rounded transition"
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Plus className="h-4 w-4" />
                                   </button>
-                                  <button
-                                    onClick={() => handleDeletePricing(pricing.id)}
-                                    className="text-red-600 hover:text-red-900 p-1 rounded transition"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  onClick={() => handleAddPricing(product.id)}
-                                  className="text-green-600 hover:text-green-900 p-1 rounded transition"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
+                                )}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

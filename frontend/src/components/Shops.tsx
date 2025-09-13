@@ -425,9 +425,11 @@ const Shops: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {userRole !== 'STAFF' && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -470,26 +472,24 @@ const Shops: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(shop.created_date).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          {userRole !== 'STAFF' && (
+                      {userRole !== 'STAFF' && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
                             <button
                               onClick={() => handleEdit(shop)}
                               className="text-blue-600 hover:text-blue-900 p-1 rounded transition"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
-                          )}
-                          {userRole !== 'STAFF' && (
                             <button
                               onClick={() => handleDelete(shop.id)}
                               className="text-red-600 hover:text-red-900 p-1 rounded transition"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
-                          )}
-                        </div>
-                      </td>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -611,13 +611,15 @@ const Shops: React.FC = () => {
           <>
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">Weekly Shop Schedule</h2>
-              <button
-                onClick={() => setShowShopSelector(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Assign Shop to Day
-              </button>
+              {userRole !== 'STAFF' && (
+                <button
+                  onClick={() => setShowShopSelector(true)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Assign Shop to Day
+                </button>
+              )}
             </div>
 
             {/* Schedule Cards */}
@@ -635,17 +637,19 @@ const Shops: React.FC = () => {
                   >
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="text-lg font-semibold text-gray-900">{day}</h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedDay(day);
-                          setShowShopSelector(true);
-                        }}
-                        className="inline-flex items-center px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Assign
-                      </button>
+                      {userRole !== 'STAFF' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDay(day);
+                            setShowShopSelector(true);
+                          }}
+                          className="inline-flex items-center px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Assign
+                        </button>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -751,13 +755,15 @@ const Shops: React.FC = () => {
                               <p className="text-sm text-blue-500">{shop.email}</p>
                             )}
                           </div>
-                          <button
-                            onClick={() => removeShopFromDay(selectedDay, shop.id)}
-                            className="ml-4 text-red-600 hover:text-red-800 focus:outline-none p-2"
-                            aria-label={`Remove ${shop.shop_name} from ${selectedDay}`}
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
+                          {userRole !== 'STAFF' && (
+                            <button
+                              onClick={() => removeShopFromDay(selectedDay, shop.id)}
+                              className="ml-4 text-red-600 hover:text-red-800 focus:outline-none p-2"
+                              aria-label={`Remove ${shop.shop_name} from ${selectedDay}`}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          )}
                         </div>
                       ))
                     )}
