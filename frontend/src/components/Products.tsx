@@ -9,10 +9,14 @@ interface Product {
   id: number;
   product_name: string;
   unit: string;
+  status: 'active' | 'inactive';
   created_date: string;
   gst: number; // Added gst property
+  quantity: number;
+  rate: number;
   hsn_code: string; // Added hsn_code property
   price: number; // Added price property
+  stockId: number | null;
 }
 
 interface ShopProduct {
@@ -28,10 +32,9 @@ interface ShopProduct {
 }
 
 const Products: React.FC = () => {
-  const { weeklySchedule, shopProducts, setShopProducts } = useAppContext();
+  const { weeklySchedule, shopProducts, setShopProducts, products, setProducts } = useAppContext();
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'products' | 'pricing'>('products');
   const [showModal, setShowModal] = useState(false);
@@ -81,33 +84,7 @@ const Products: React.FC = () => {
   }, [weeklySchedule]);
 
 
-  // Fetch products data on component mount
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await productsAPI.getProducts({ limit: 100 });
-          if (response.success) {
-            const fetchedProducts: Product[] = response.data.map((product: any) => ({
-              id: product.id,
-              product_name: product.productName,
-              unit: product.unit,
-              created_date: new Date(product.createdAt).toISOString().split('T')[0],
-              gst: product.gst,
-              hsn_code: product.hsnCode,
-              price: product.price || 0,
-            }));
-            setProducts(fetchedProducts);
-          }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        alert('Failed to load products data');
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchProducts();
-  }, []);
 
   const [productForm, setProductForm] = useState({
     product_name: '',
@@ -166,10 +143,14 @@ const Products: React.FC = () => {
             id: createdProduct.id,
             product_name: createdProduct.productName,
             unit: createdProduct.unit,
+            status: 'active',
             created_date: new Date(createdProduct.createdAt).toISOString().split('T')[0],
             gst: createdProduct.gst,
+            quantity: 0,
+            rate: createdProduct.price || 0,
             hsn_code: createdProduct.hsnCode,
             price: createdProduct.price || 0,
+            stockId: null,
           };
           setProducts([...products, newProduct]);
           resetProductForm();
