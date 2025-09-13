@@ -5,6 +5,7 @@ import { useAppContext } from '../context/AppContext';
 const Reports: React.FC = () => {
   const { bills, products, shops } = useAppContext();
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'monthly' | 'shops' | 'returns' | 'products'>('daily');
+  const [pageStates, setPageStates] = useState<Record<string, number>>({});
 
   // Helper functions for weekly reports
   const getWeekNumber = (date: Date): number => {
@@ -104,8 +105,7 @@ const Reports: React.FC = () => {
         pendingAmount: bill.pending_amount,
         status: bill.status
       }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 50); // Show last 50 bills
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [bills]);
 
   const shopWiseReport = useMemo(() => {
@@ -186,8 +186,7 @@ const Reports: React.FC = () => {
         pending: item.pending,
         shops: item.shops.size
       }))
-      .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
-      .slice(0, 12); // Show last 12 weeks
+      .sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
   }, [bills]);
 
   // Monthly report generation
@@ -229,8 +228,7 @@ const Reports: React.FC = () => {
         pending: item.pending,
         shops: item.shops.size
       }))
-      .sort((a, b) => new Date(`${b.month}-01`).getTime() - new Date(`${a.month}-01`).getTime())
-      .slice(0, 12); // Show last 12 months
+      .sort((a, b) => new Date(`${b.month}-01`).getTime() - new Date(`${a.month}-01`).getTime());
   }, [bills]);
 
 
@@ -285,6 +283,74 @@ const Reports: React.FC = () => {
       </div>
     </div>
   );
+
+  const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (page: number) => void }) => {
+    if (totalPages <= 1) return null;
+
+    let pages: (number | string)[] = [];
+    if (totalPages <= 3) {
+      pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+    } else {
+      pages = [1, 2, 3, '...', totalPages];
+    }
+
+    return (
+      <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-gray-200">
+        <div className="flex items-center">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <div className="flex mx-4">
+            {pages.map((page, index) => {
+              if (page === '...') {
+                return (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="px-3 py-1 mx-1 text-sm font-medium text-gray-500 select-none"
+                  >
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={page}
+                  onClick={() => onPageChange(page as number)}
+                  className={`px-3 py-1 mx-1 text-sm font-medium rounded-md ${
+                    page === currentPage
+                      ? 'text-blue-600 bg-blue-50 border border-blue-500'
+                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+        <div className="text-sm text-gray-700">
+          Page {currentPage} of {totalPages}
+        </div>
+      </div>
+    );
+  };
+
+  const handlePageChange = (tab: string, page: number) => {
+    setPageStates(prev => ({ ...prev, [tab]: page }));
+  };
+
+  const currentPage = pageStates[activeTab] || 1;
 
   return (
     <div className="space-y-6">
@@ -394,40 +460,49 @@ const Reports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {dailyBillingSummary.map((bill) => (
-                    <tr key={bill.billNumber} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {new Date(bill.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {bill.billNumber}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {bill.shopName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{bill.totalAmount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                        ₹{bill.receivedAmount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
-                        ₹{bill.pendingAmount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          bill.status === 'COMPLETED'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {bill.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const totalPages = Math.ceil(dailyBillingSummary.length / 5);
+                    const paginatedData = dailyBillingSummary.slice((currentPage - 1) * 5, currentPage * 5);
+                    return paginatedData.map((bill) => (
+                      <tr key={bill.billNumber} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {new Date(bill.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {bill.billNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {bill.shopName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          ₹{bill.totalAmount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          ₹{bill.receivedAmount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
+                          ₹{bill.pendingAmount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            bill.status === 'COMPLETED'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {bill.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(dailyBillingSummary.length / 5)}
+              onPageChange={(page) => handlePageChange('daily', page)}
+            />
           </div>
         )}
 
@@ -475,37 +550,46 @@ const Reports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {weeklyBillingSummary.map((week) => (
-                    <tr key={week.week} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {week.week}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {week.startDate.toLocaleDateString()} - {week.endDate.toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {week.bills}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{week.revenue.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                        ₹{week.received.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
-                        ₹{week.pending.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {week.shops}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{Math.round(week.revenue / week.bills).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const totalPages = Math.ceil(weeklyBillingSummary.length / 5);
+                    const paginatedData = weeklyBillingSummary.slice((currentPage - 1) * 5, currentPage * 5);
+                    return paginatedData.map((week) => (
+                      <tr key={week.week} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {week.week}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {week.startDate.toLocaleDateString()} - {week.endDate.toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {week.bills}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          ₹{week.revenue.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          ₹{week.received.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
+                          ₹{week.pending.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {week.shops}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{Math.round(week.revenue / week.bills).toLocaleString()}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(weeklyBillingSummary.length / 5)}
+              onPageChange={(page) => handlePageChange('weekly', page)}
+            />
           </div>
         )}
 
@@ -553,37 +637,46 @@ const Reports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {monthlyBillingSummary.map((month) => (
-                    <tr key={month.month} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {month.monthName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {month.year}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {month.bills}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{month.revenue.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                        ₹{month.received.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
-                        ₹{month.pending.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {month.shops}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{Math.round(month.revenue / month.bills).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const totalPages = Math.ceil(monthlyBillingSummary.length / 5);
+                    const paginatedData = monthlyBillingSummary.slice((currentPage - 1) * 5, currentPage * 5);
+                    return paginatedData.map((month) => (
+                      <tr key={month.month} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {month.monthName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {month.year}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {month.bills}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          ₹{month.revenue.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          ₹{month.received.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
+                          ₹{month.pending.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {month.shops}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{Math.round(month.revenue / month.bills).toLocaleString()}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(monthlyBillingSummary.length / 5)}
+              onPageChange={(page) => handlePageChange('monthly', page)}
+            />
           </div>
         )}
 
@@ -622,28 +715,37 @@ const Reports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {shopWiseReport.map((shop) => (
-                    <tr key={shop.shop_name} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{shop.shop_name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {shop.bills}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{shop.total_amount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{shop.avg_bill.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(shop.last_order).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const totalPages = Math.ceil(shopWiseReport.length / 5);
+                    const paginatedData = shopWiseReport.slice((currentPage - 1) * 5, currentPage * 5);
+                    return paginatedData.map((shop) => (
+                      <tr key={shop.shop_name} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{shop.shop_name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {shop.bills}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          ₹{shop.total_amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{shop.avg_bill.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(shop.last_order).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(shopWiseReport.length / 5)}
+              onPageChange={(page) => handlePageChange('shops', page)}
+            />
           </div>
         )}
 
@@ -685,33 +787,42 @@ const Reports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {returnHistory.map((returnItem: any, index: number) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(returnItem.return_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {returnItem.shop_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {returnItem.product_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {returnItem.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                        -₹{returnItem.amount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                          {returnItem.reason}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const totalPages = Math.ceil(returnHistory.length / 5);
+                    const paginatedData = returnHistory.slice((currentPage - 1) * 5, currentPage * 5);
+                    return paginatedData.map((returnItem: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(returnItem.return_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {returnItem.shop_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {returnItem.product_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {returnItem.quantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                          -₹{returnItem.amount}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                            {returnItem.reason}
+                          </span>
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(returnHistory.length / 5)}
+              onPageChange={(page) => handlePageChange('returns', page)}
+            />
           </div>
         )}
 
@@ -753,41 +864,50 @@ const Reports: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {productPerformance.map((product) => (
-                    <tr key={product.product_name} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{product.product_name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.total_sold} units
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{product.revenue.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                        {product.returns} units
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.shops} shops
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                            <div
-                              className="bg-green-600 h-2 rounded-full"
-                              style={{ width: `${Math.min(100, (product.revenue / 20000) * 100)}%` }}
-                            ></div>
+                  {(() => {
+                    const totalPages = Math.ceil(productPerformance.length / 5);
+                    const paginatedData = productPerformance.slice((currentPage - 1) * 5, currentPage * 5);
+                    return paginatedData.map((product) => (
+                      <tr key={product.product_name} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{product.product_name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {product.total_sold} units
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          ₹{product.revenue.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                          {product.returns} units
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {product.shops} shops
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                              <div
+                                className="bg-green-600 h-2 rounded-full"
+                                style={{ width: `${Math.min(100, (product.revenue / 20000) * 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {Math.round((product.revenue / 20000) * 100)}%
+                            </span>
                           </div>
-                          <span className="text-xs text-gray-500">
-                            {Math.round((product.revenue / 20000) * 100)}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(productPerformance.length / 5)}
+              onPageChange={(page) => handlePageChange('products', page)}
+            />
           </div>
         )}
       </div>
