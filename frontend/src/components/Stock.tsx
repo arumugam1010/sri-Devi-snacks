@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Package, IndianRupee, Warehouse } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { stocksAPI } from '../services/api';
@@ -19,7 +19,7 @@ interface Product {
 }
 
 const Stock: React.FC = () => {
-  const { products, setProducts } = useAppContext();
+  const { products, setProducts, refreshData } = useAppContext();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -42,6 +42,11 @@ const Stock: React.FC = () => {
     price: '',
     stockId: null as number | null
   });
+
+  // Refresh data when component mounts
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   // Fix: Use product rate from products context for display and editing
   const getProductRate = (productId: number) => {
