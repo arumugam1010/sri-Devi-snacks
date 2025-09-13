@@ -286,9 +286,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const response = await billsAPI.updateBill(parseInt(id), updateData);
       if (response.success) {
+        // Use the full updated bill from backend response which includes recalculated pending_amount and status
+        const updatedBill = response.data;
         setBills(prevBills =>
           prevBills.map(bill =>
-            bill.id === id ? { ...bill, ...updateData } : bill
+            bill.id === id ? {
+              ...bill,
+              received_amount: updatedBill.receivedAmount,
+              pending_amount: updatedBill.pendingAmount,
+              status: updatedBill.status,
+              ...updateData // in case there are other fields like notes
+            } : bill
           )
         );
       } else {

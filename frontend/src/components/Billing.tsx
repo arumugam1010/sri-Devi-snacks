@@ -42,7 +42,7 @@ interface ReturnItem extends BillItem {
 }
 
 const Billing: React.FC = () => {
-  const { products, addBill, shopProducts, updateBill } = useAppContext();
+  const { products, addBill, shopProducts, updateBill, refreshData } = useAppContext();
   
   // Mock data
   const { weeklySchedule } = useAppContext();
@@ -311,33 +311,27 @@ const Billing: React.FC = () => {
 
     try {
       let remainingPayment = pendingPaymentAmount;
-      const updatedPendingBills = [...pendingBills];
 
       // Apply payment to bills in order (oldest first)
-      for (let i = 0; i < updatedPendingBills.length && remainingPayment > 0; i++) {
-        const bill = updatedPendingBills[i];
+      for (let i = 0; i < pendingBills.length && remainingPayment > 0; i++) {
+        const bill = pendingBills[i];
         const paymentAmount = Math.min(remainingPayment, bill.pending_amount);
         const newReceivedAmount = bill.received_amount + paymentAmount;
 
-        // Update the bill via backend API
+        // Update the bill via backend API (this will update global bills state with correct pending_amount and status)
         await updateBill(bill.id, {
           receivedAmount: newReceivedAmount,
         });
 
-        // Update the pending bill in our local state
-        updatedPendingBills[i] = {
-          ...bill,
-          received_amount: newReceivedAmount,
-          pending_amount: bill.pending_amount - paymentAmount,
-          status: (bill.pending_amount - paymentAmount) === 0 ? 'COMPLETED' : 'PENDING'
-        };
-
         remainingPayment -= paymentAmount;
       }
 
-      // Update pending bills state, filtering out completed bills
-      const newPendingBills = updatedPendingBills.filter(bill => bill.pending_amount > 0);
-      setPendingBills(newPendingBills);
+      // Refresh pending bills from updated global bills state
+      const shopPendingBills = bills.filter(bill =>
+        bill.shop_id === selectedShop && bill.status === 'PENDING'
+      ).sort((a, b) => new Date(a.bill_date).getTime() - new Date(b.bill_date).getTime());
+
+      setPendingBills(shopPendingBills);
 
       // Reset payment amount but keep the mode
       setPendingPaymentAmount(0);
@@ -345,7 +339,8 @@ const Billing: React.FC = () => {
       // Show success message
       const totalPaid = pendingPaymentAmount - remainingPayment;
       if (totalPaid > 0) {
-        alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${newPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}`);
+        const remainingBalance = shopPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
+        alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${remainingBalance}`);
       }
     } catch (error) {
       console.error('Failed to update pending payments:', error);
@@ -435,6 +430,22 @@ const Billing: React.FC = () => {
     try {
       // Use the context's addBill method which automatically handles stock updates
       await addBill(newBill);
+
+      // If there was excess payment that might have been applied to pending bills, refresh data
+      if (parseFloat(receivedAmount || "0") > finalTotal) {
+        await refreshData();
+      }
+
+      // Refresh pending bills from updated global bills state if shop is selected
+      if (selectedShop) {
+        const shopPendingBills = bills.filter(bill =>
+          bill.shop_id === selectedShop && bill.status === 'PENDING'
+        ).sort((a, b) => new Date(a.bill_date).getTime() - new Date(b.bill_date).getTime());
+
+        setPendingBills(shopPendingBills);
+        setShowPendingBillAlert(shopPendingBills.length > 0);
+      }
+
       setCurrentBill([]);
       setReturnItems([]);
       setReceivedAmount("0");
@@ -472,8 +483,8 @@ const Billing: React.FC = () => {
       const response = await billsAPI.createBill(billData);
 
       if (response.success) {
-        // Refresh bills list to see updated statuses
-        // Instead of loadBills, refresh bills from context or refetch as needed
+        // Refresh bills data to see updated pending amounts and statuses
+        await refreshData();
         alert(`Payment of ₹${paymentBillData.receivedAmount} applied successfully to pending bills!`);
       } else {
         throw new Error(response.message || 'Failed to process payment');
@@ -663,23 +674,32 @@ const Billing: React.FC = () => {
     if (!currentBillForPayment) return;
 
     try {
-      // Update the bill via backend API
+      // Update the bill via backend API (this will update global bills state with correct pending_amount and status)
       const newReceivedAmount = currentBillForPayment.received_amount + paidAmount;
-      const newPendingAmount = Math.max(0, currentBillForPayment.total_amount - newReceivedAmount);
 
       await updateBill(currentBillForPayment.id, {
         receivedAmount: newReceivedAmount,
       });
 
-      // Show success message
-      const statusMessage = newPendingAmount === 0 ? 'Completed' : 'Partially Paid';
+      // Refresh pending bills from updated global bills state if shop is selected
+      if (selectedShop) {
+        const shopPendingBills = bills.filter(bill =>
+          bill.shop_id === selectedShop && bill.status === 'PENDING'
+        ).sort((a, b) => new Date(a.bill_date).getTime() - new Date(b.bill_date).getTime());
+
+        setPendingBills(shopPendingBills);
+        setShowPendingBillAlert(shopPendingBills.length > 0);
+      }
+
+      // Get the updated bill status
+      const updatedBill = bills.find(b => b.id === currentBillForPayment.id);
+      const statusMessage = updatedBill && updatedBill.pending_amount === 0 ? 'Completed' : 'Partially Paid';
+
       alert(`Payment of ₹${paidAmount} processed successfully via GPay!\nTransaction ID: ${transactionId}\nBill ${currentBillForPayment.id} updated to ${statusMessage} status.`);
 
       // Reset states
       setCurrentBill([]);
       setReceivedAmount("0");
-      setPendingBills([]);
-      setShowPendingBillAlert(false);
       setSelectedShop(null);
       setShowBillingInterface(false);
       setIsPayPendingMode(false);
@@ -1164,8 +1184,10 @@ const Billing: React.FC = () => {
                           <>
                             <p className="text-blue-600 text-sm mt-2">Total Items: {currentBill.length}</p>
                             <p className="text-blue-600 text-sm">Total Amount: ₹{
-                              currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
-                              pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)
+                              (
+                                currentBill.reduce((sum, item) => sum + item.amount + (item.sgst || 0) + (item.cgst || 0), 0) +
+                                pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)
+                              ).toFixed(2)
                             }</p>
 
                             {/* Received Amount Input */}
