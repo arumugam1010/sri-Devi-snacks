@@ -209,10 +209,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             product_id: item.productId,
             product_name: item.product.productName,
             quantity: item.quantity,
+            price: item.rate,
             rate: item.rate,
             amount: item.amount,
             sgst: item.sgst,
             cgst: item.cgst,
+            hsnCode: item.hsnCode,
           })),
         })));
       }
@@ -248,10 +250,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         items: bill.items.map(item => ({
           productId: item.product_id,
           quantity: item.quantity,
-          rate: item.rate,
+          rate: item.price,
           sgst: item.sgst !== undefined ? item.sgst : 0,
           cgst: item.cgst !== undefined ? item.cgst : 0,
-          hsnCode: item.hsn_code,
+          hsnCode: item.hsnCode,
         })),
       };
 

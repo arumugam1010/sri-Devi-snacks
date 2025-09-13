@@ -298,9 +298,9 @@ const Reports: React.FC = () => {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
+          <StatCard
           title="Total Revenue"
-          value={`₹${bills.reduce((sum, bill) => sum + bill.total_amount, 0).toLocaleString()}`}
+          value={`₹${bills.reduce((sum, bill) => sum + bill.total_amount, 0).toFixed(2)}`}
           icon={DollarSign}
           color="green"
         />

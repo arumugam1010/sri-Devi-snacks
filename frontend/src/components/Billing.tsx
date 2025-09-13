@@ -953,8 +953,8 @@ const Billing: React.FC = () => {
                             </div>
                             
                             <div className="text-sm text-gray-600">
-                              <p>Total: ₹{monthBills.reduce((sum, bill) => sum + bill.total_amount, 0)}</p>
-                              <p>Pending: ₹{monthBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}</p>
+                            <p>Total: ₹{monthBills.reduce((sum, bill) => sum + bill.total_amount, 0).toFixed(2)}</p>
+                            <p>Pending: ₹{monthBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toFixed(2)}</p>
                             </div>
                             
                             <div className="mt-3 text-xs text-gray-500">

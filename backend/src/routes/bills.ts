@@ -62,11 +62,21 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: expres
               email: true,
             },
           },
-          billItems: {
-            include: {
-              product: true,
-            },
+        billItems: {
+          select: {
+            id: true,
+            billId: true,
+            productId: true,
+            quantity: true,
+            rate: true,
+            amount: true,
+            sgst: true,
+            cgst: true,
+            hsnCode: true,
+            createdAt: true,
+            product: true,
           },
+        },
         },
         skip,
         take: limit,
@@ -124,7 +134,17 @@ router.get('/:id', authenticateToken, async (req: express.Request, res: express.
           },
         },
         billItems: {
-          include: {
+          select: {
+            id: true,
+            billId: true,
+            productId: true,
+            quantity: true,
+            rate: true,
+            amount: true,
+            sgst: true,
+            cgst: true,
+            hsnCode: true,
+            createdAt: true,
             product: true,
           },
         },
@@ -344,7 +364,17 @@ router.post('/', authenticateToken, requireUser, async (req: AuthenticatedReques
           },
         },
         billItems: {
-          include: {
+          select: {
+            id: true,
+            billId: true,
+            productId: true,
+            quantity: true,
+            rate: true,
+            amount: true,
+            sgst: true,
+            cgst: true,
+            hsnCode: true,
+            createdAt: true,
             product: true,
           },
         },
@@ -421,7 +451,17 @@ router.put('/:id', authenticateToken, requireUser, async (req: express.Request, 
           },
         },
         billItems: {
-          include: {
+          select: {
+            id: true,
+            billId: true,
+            productId: true,
+            quantity: true,
+            rate: true,
+            amount: true,
+            sgst: true,
+            cgst: true,
+            hsnCode: true,
+            createdAt: true,
             product: true,
           },
         },
