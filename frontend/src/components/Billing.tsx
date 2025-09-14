@@ -975,7 +975,7 @@ Status: ${billStatus}`);
                         <p className="text-xs text-gray-500">{new Date(bill.bill_date).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-sm">₹{bill.pending_amount}</p>
+                        <p className="font-semibold text-sm">₹{bill.pending_amount.toFixed(2)}</p>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
       bill.status === 'COMPLETED'
         ? 'bg-green-100 text-green-800'
@@ -987,8 +987,8 @@ Status: ${billStatus}`);
                     </div>
 
                               <div className="flex justify-between text-xs text-gray-600 mb-3">
-                                <span>Received: ₹{bill.received_amount}</span>
-                                <span>Pending: ₹{bill.pending_amount}</span>
+                                <span>Received: ₹{bill.received_amount.toFixed(2)}</span>
+                                <span>Pending: ₹{bill.pending_amount.toFixed(2)}</span>
                               </div>
 
                     <div className="flex justify-between space-x-3">
