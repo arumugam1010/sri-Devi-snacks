@@ -659,16 +659,18 @@ const Shops: React.FC = () => {
                         dayShops.map(shop => (
                           <div key={shop.id} className="flex justify-between items-center bg-blue-50 rounded-lg px-3 py-2">
                             <span className="text-sm font-medium text-blue-800">{shop.shop_name}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeShopFromDay(day, shop.id);
-                              }}
-                              className="text-red-600 hover:text-red-800 focus:outline-none"
-                              aria-label={`Remove ${shop.shop_name} from ${day}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {userRole !== 'STAFF' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeShopFromDay(day, shop.id);
+                                }}
+                                className="text-red-600 hover:text-red-800 focus:outline-none"
+                                aria-label={`Remove ${shop.shop_name} from ${day}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         ))
                       )}
