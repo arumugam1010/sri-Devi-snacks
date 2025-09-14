@@ -383,7 +383,7 @@ const Billing: React.FC = () => {
       const totalPaid = pendingPaymentAmount - remainingPayment;
       if (totalPaid > 0) {
         const remainingBalance = shopPendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0);
-        alert(`Payment of ₹${totalPaid} applied to pending bills. Remaining balance: ₹${remainingBalance}`);
+        alert(`Payment of ₹${totalPaid} applied to pending bills. `);
         setPaymentCompleted(true);
         setShowBillingInterface(false);
         setSelectedMonth(null); // Reset to show financial year overview
@@ -506,7 +506,9 @@ const Billing: React.FC = () => {
       setPendingPaymentAmount(0);
       setHasPrinted(false); // Reset print status when bill is saved
       setSelectedMonth(null); // Reset to show financial year overview
-      alert(`Bill ${newBill.id} saved successfully!\nFinal Amount: ₹${finalTotal}\nStatus: ${billStatus}\nStock updated for sold items.`);
+alert(`Bill ${newBill.id} saved successfully!
+Final Amount: ₹${finalTotal.toFixed(2)}
+Status: ${billStatus}`);
     } catch (error: any) {
       console.error('Failed to save bill:', error);
       alert(`Failed to save bill: ${error.message || 'Unknown error occurred'}`);
