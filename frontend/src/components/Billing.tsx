@@ -1635,7 +1635,7 @@ const Billing: React.FC = () => {
                                     <div class="dashed-line"></div>
                                     <div class="total-row" style="font-weight: bold;">
                                       <div>Final Total:</div>
-                                      <div>₹${finalTotal}</div>
+                                      <div>₹${finalTotal.toFixed(2)}</div>
                                     </div>
                                   </div>
                                   
@@ -2465,7 +2465,7 @@ const Billing: React.FC = () => {
                             <div class="dashed-line"></div>
                             <div class="total-row" style="font-weight: bold;">
                               <div>Final Total:</div>
-                              <div>₹${selectedBillForView.total_amount}</div>
+                              <div>₹${selectedBillForView.total_amount.toFixed(2)}</div>
                             </div>
                           </div>
                           
