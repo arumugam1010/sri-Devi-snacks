@@ -1220,7 +1220,7 @@ Status: ${billStatus}`);
                         {pendingBills.length > 0 ? (
                           <div className="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
                             <p className="text-yellow-800 text-sm font-medium">
-                              Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                              Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toFixed(2)}
                             </p>
                             <p className="text-yellow-700 text-xs">
                               {pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''} (oldest: {pendingBills[0].id})
@@ -1265,7 +1265,7 @@ Status: ${billStatus}`);
                         {pendingBills.length > 0 && !isPayPendingMode && (
                           <div className="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
                             <p className="text-yellow-800 text-sm font-medium">
-                              Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                              Total Pending Balance: ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toFixed(2)}
                             </p>
                             <p className="text-yellow-700 text-xs">
                               {pendingBills.length} pending bill{pendingBills.length > 1 ? 's' : ''} (oldest: {pendingBills[0].id})
@@ -1337,7 +1337,7 @@ Status: ${billStatus}`);
                           disabled={pendingPaymentAmount <= 0}
                           className="w-full mt-3 inline-flex items-center justify-center px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition"
                         >
-                          Pay Pending ₹{pendingPaymentAmount > 0 ? pendingPaymentAmount : pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                          Pay Pending ₹{pendingPaymentAmount > 0 ? pendingPaymentAmount.toFixed(2) : pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toFixed(2)}
                         </button>
 
                         <button
@@ -1354,7 +1354,7 @@ Status: ${billStatus}`);
                         onClick={() => setIsPayPendingMode(true)}
                         className="w-full mt-3 inline-flex items-center justify-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition"
                       >
-                        Pay Pending ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0)}
+                        Pay Pending ₹{pendingBills.reduce((sum, bill) => sum + bill.pending_amount, 0).toFixed(2)}
                       </button>
                     )}
                   </div>
