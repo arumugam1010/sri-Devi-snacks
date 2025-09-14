@@ -969,7 +969,7 @@ const Billing: React.FC = () => {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <p className="font-medium text-sm text-gray-900">{bill.id}</p>
-                        <p className="text-xs text-gray-500">{bill.shop_name}</p>
+                        <p className="text-sm font-semibold text-gray-900">{bill.shop_name}</p>
                         <p className="text-xs text-gray-500">{new Date(bill.bill_date).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
